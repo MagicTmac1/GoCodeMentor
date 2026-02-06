@@ -459,10 +459,8 @@
             return date.toLocaleString('zh-CN');
         }
 
-        async function showAssignmentDetails(assignmentId, status) {
+        async function showAssignmentDetails(assignmentId, status, studentId) {
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const studentId = urlParams.get('studentId');
                 const userRole = getCookie('user_role');
                 
                 let apiUrl;
@@ -604,12 +602,14 @@
         }
 
         function escapeHtml(text) {
-            return text
-                .replace(/&/g, "&")
-                .replace(/</g, "<")
-                .replace(/>/g, ">")
-                .replace(/"/g, """)
-                .replace(/'/g, "&#039;");
+            var map = {
+                '&': '&',
+                '<': '<',
+                '>': '>',
+                '"': '"',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
         function closeModal() {
@@ -661,26 +661,6 @@
                 window.history.back();
             }
         }
-
-        // 修复：确保在DOM加载完成后执行
-        document.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const studentId = urlParams.get('studentId');
-            if (studentId) {
-                const userRole = getCookie('user_role');
-                if (userRole === 'teacher') {
-                    loadStudentAssignments(studentId);
-                } else if (userRole === 'student' && studentId === getCookie('user_id')) {
-                    loadMyAssignments();
-                } else {
-                    alert('无权查看该学生作业信息');
-                    window.history.back();
-                }
-            } else {
-                alert('学生ID不能为空');
-                window.history.back();
-            }
-        });
     </script>
 </body>
 </html>

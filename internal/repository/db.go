@@ -25,13 +25,11 @@ type SqlConfig struct {
 	Timezone string `mapstructure:"timezone"`
 }
 
-var DB *gorm.DB
-
-func InitDB() error {
+func InitDB() (*gorm.DB, error) {
 	// 加载sql配置
 	config, err := LoadSqlConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// 先尝试连接目标数据库
@@ -51,7 +49,7 @@ func InitDB() error {
 
 		defaultDB, err := gorm.Open(postgres.Open(defaultDsn), &gorm.Config{})
 		if err != nil {
-			return fmt.Errorf("连接默认数据库失败: %v", err)
+			return nil, fmt.Errorf("连接默认数据库失败: %v", err)
 		}
 
 		// 创建目标数据库（使用原始 SQL）
@@ -73,15 +71,13 @@ func InitDB() error {
 			Logger: logger.Default.LogMode(logger.Info),
 		})
 		if err != nil {
-			return fmt.Errorf("连接新创建的数据库失败: %v", err)
+			return nil, fmt.Errorf("连接新创建的数据库失败: %v", err)
 		}
 	}
 
-	DB = db
-
 	// 自动创建表结构
 	// fmt.Println("正在创建数据表...")
-	err = DB.AutoMigrate(
+	err = db.AutoMigrate(
 		&model.User{},
 		&model.Class{},
 		&model.ChatSession{},
@@ -92,15 +88,10 @@ func InitDB() error {
 		&model.Feedback{},
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// 删除旧表（如果存在）
-	DB.Exec("DROP TABLE IF EXISTS sessions")
-	DB.Exec("DROP TABLE IF EXISTS messages")
-	DB.Exec("DROP TABLE IF EXISTS assignment_publishes")
-
-	return nil
+	return db, nil
 }
 
 func getEnv(key, defaultValue string) string {

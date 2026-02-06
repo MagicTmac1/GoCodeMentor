@@ -3,20 +3,14 @@ package service
 import (
 	"GoCodeMentor/internal/model"
 	"GoCodeMentor/internal/repository"
-
-	"gorm.io/gorm"
 )
 
-type FeedbackService struct{}
-
-func NewFeedbackService() *FeedbackService {
-	return &FeedbackService{}
+type FeedbackService struct {
+	feedbackRepo repository.FeedbackRepository
 }
 
-// CreateFeedback 创建反馈（仅返回错误）
-func (s *FeedbackService) CreateFeedback(title, content, feedbackType, anonymousID string) error {
-	_, err := s.Create(feedbackType, title, content, anonymousID)
-	return err
+func NewFeedbackService(feedbackRepo repository.FeedbackRepository) IFeedbackService {
+	return &FeedbackService{feedbackRepo: feedbackRepo}
 }
 
 // Create 创建反馈并返回创建的反馈
@@ -29,31 +23,23 @@ func (s *FeedbackService) Create(feedbackType, title, content, anonymousID strin
 		Status:      "open",
 		LikeCount:   0,
 	}
-	if err := repository.DB.Create(&feedback).Error; err != nil {
+	if err := s.feedbackRepo.Create(&feedback); err != nil {
 		return nil, err
 	}
 	return &feedback, nil
 }
 
-// GetFeedbackList 获取反馈列表（按创建时间降序）
-func (s *FeedbackService) GetFeedbackList() ([]model.Feedback, error) {
-	var feedbacks []model.Feedback
-	result := repository.DB.Order("created_at desc").Find(&feedbacks)
-	return feedbacks, result.Error
-}
-
-// GetAll 别名兼容，调用 GetFeedbackList
+// GetAll 获取反馈列表
 func (s *FeedbackService) GetAll() ([]model.Feedback, error) {
-	return s.GetFeedbackList()
+	return s.feedbackRepo.GetAll()
 }
 
-// LikeFeedback 点赞反馈
-func (s *FeedbackService) LikeFeedback(id uint) error {
-	return repository.DB.Model(&model.Feedback{}).Where("id = ?", id).
-		UpdateColumn("like_count", gorm.Expr("like_count + 1")).Error
-}
-
-// Like 别名兼容，调用 LikeFeedback
+// Like 点赞反馈
 func (s *FeedbackService) Like(id uint) error {
-	return s.LikeFeedback(id)
+	feedback, err := s.feedbackRepo.GetByID(id)
+	if err != nil {
+		return err
+	}
+	feedback.LikeCount++
+	return s.feedbackRepo.Update(feedback)
 }

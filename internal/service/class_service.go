@@ -11,10 +11,16 @@ import (
 	"github.com/google/uuid"
 )
 
-type ClassService struct{}
+type ClassService struct {
+	classRepo repository.ClassRepository
+	userRepo  repository.UserRepository
+}
 
-func NewClassService() *ClassService {
-	return &ClassService{}
+func NewClassService(classRepo repository.ClassRepository, userRepo repository.UserRepository) IClassService {
+	return &ClassService{
+		classRepo: classRepo,
+		userRepo:  userRepo,
+	}
 }
 
 // generateClassCode 生成6位数字邀请码
@@ -32,8 +38,8 @@ func (s *ClassService) CreateClass(name, teacherID string) (*model.Class, error)
 		Code:      generateClassCode(),
 	}
 
-	if result := repository.DB.Create(class); result.Error != nil {
-		return nil, result.Error
+	if err := s.classRepo.Create(class); err != nil {
+		return nil, err
 	}
 
 	return class, nil
@@ -41,88 +47,81 @@ func (s *ClassService) CreateClass(name, teacherID string) (*model.Class, error)
 
 // GetClassByID 根据ID获取班级
 func (s *ClassService) GetClassByID(id string) (*model.Class, error) {
-	var class model.Class
-	if result := repository.DB.First(&class, "id = ?", id); result.Error != nil {
-		return nil, result.Error
-	}
-	return &class, nil
+	return s.classRepo.GetByID(id)
 }
 
 // GetClassesByTeacherID 获取教师创建的所有班级
 func (s *ClassService) GetClassesByTeacherID(teacherID string) ([]model.Class, error) {
-	var classes []model.Class
-	result := repository.DB.Where("teacher_id = ?", teacherID).Order("created_at desc").Find(&classes)
-	return classes, result.Error
+	return s.classRepo.GetByTeacherID(teacherID)
 }
 
 // GetClassByCode 根据邀请码获取班级
 func (s *ClassService) GetClassByCode(code string) (*model.Class, error) {
-	var class model.Class
-	if result := repository.DB.Where("code = ?", code).First(&class); result.Error != nil {
-		return nil, errors.New("班级不存在")
-	}
-	return &class, nil
+	return s.classRepo.GetByCode(code)
 }
 
 // JoinClass 学生加入班级
 func (s *ClassService) JoinClass(studentID, code string) error {
-	class, err := s.GetClassByCode(code)
+	class, err := s.classRepo.GetByCode(code)
 	if err != nil {
 		return err
 	}
 
-	// 更新学生的班级ID
-	result := repository.DB.Model(&model.User{}).Where("id = ?", studentID).Updates(map[string]interface{}{
-		"class_id": class.ID,
-	})
-	if result.Error != nil {
-		return result.Error
+	user, err := s.userRepo.GetByID(studentID)
+	if err != nil {
+		return errors.New("学生不存在")
 	}
 
-	return nil
+	user.ClassID = &class.ID
+	return s.userRepo.Update(user)
 }
 
 // LeaveClass 学生退出班级
 func (s *ClassService) LeaveClass(studentID string) error {
-	result := repository.DB.Model(&model.User{}).Where("id = ?", studentID).Updates(map[string]interface{}{
-		"class_id": nil,
-	})
-	return result.Error
+	user, err := s.userRepo.GetByID(studentID)
+	if err != nil {
+		return errors.New("学生不存在")
+	}
+
+	user.ClassID = nil
+	return s.userRepo.Update(user)
 }
 
 // AddStudentToClass 教师添加学生到班级
 func (s *ClassService) AddStudentToClass(studentID, classID string) error {
 	// 验证班级存在
-	var class model.Class
-	if result := repository.DB.First(&class, "id = ?", classID); result.Error != nil {
+	if _, err := s.classRepo.GetByID(classID); err != nil {
 		return errors.New("班级不存在")
 	}
 
-	// 更新学生的班级ID
-	result := repository.DB.Model(&model.User{}).Where("id = ? AND role = ?", studentID, "student").Updates(map[string]interface{}{
-		"class_id": class.ID,
-	})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("学生不存在或不是学生角色")
+	// 获取学生
+	user, err := s.userRepo.GetByID(studentID)
+	if err != nil {
+		return errors.New("学生不存在")
 	}
 
-	return nil
+	if user.Role != "student" {
+		return errors.New("该用户不是学生")
+	}
+
+	// 更新学生的班级ID
+	user.ClassID = &classID
+	return s.userRepo.Update(user)
 }
 
 // RemoveStudentFromClass 教师从班级移除学生
 func (s *ClassService) RemoveStudentFromClass(studentID, classID string) error {
 	// 验证学生确实在这个班级
-	var user model.User
-	if result := repository.DB.First(&user, "id = ? AND class_id = ?", studentID, classID); result.Error != nil {
+	user, err := s.userRepo.GetByID(studentID)
+	if err != nil {
+		return errors.New("学生不存在")
+	}
+
+	if user.ClassID == nil || *user.ClassID != classID {
 		return errors.New("学生不在该班级")
 	}
 
 	// 清空学生的班级ID
-	result := repository.DB.Model(&model.User{}).Where("id = ?", studentID).Updates(map[string]interface{}{
-		"class_id": nil,
-	})
-	return result.Error
+	user.ClassID = nil
+	return s.userRepo.Update(user)
 }

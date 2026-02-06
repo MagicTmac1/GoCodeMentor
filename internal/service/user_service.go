@@ -9,17 +9,18 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserService struct{}
+type UserService struct {
+	userRepo repository.UserRepository
+}
 
-func NewUserService() *UserService {
-	return &UserService{}
+func NewUserService(userRepo repository.UserRepository) IUserService {
+	return &UserService{userRepo: userRepo}
 }
 
 // Register 用户注册
 func (s *UserService) Register(username, password, name, role string) (*model.User, error) {
 	// 检查用户名是否已存在
-	var existing model.User
-	if result := repository.DB.Where("username = ?", username).First(&existing); result.Error == nil {
+	if _, err := s.userRepo.GetByUsername(username); err == nil {
 		return nil, errors.New("用户名已存在")
 	}
 
@@ -38,8 +39,8 @@ func (s *UserService) Register(username, password, name, role string) (*model.Us
 		Role:     role, // teacher 或 student
 	}
 
-	if result := repository.DB.Create(user); result.Error != nil {
-		return nil, result.Error
+	if err := s.userRepo.Create(user); err != nil {
+		return nil, err
 	}
 
 	return user, nil
@@ -47,8 +48,8 @@ func (s *UserService) Register(username, password, name, role string) (*model.Us
 
 // Login 用户登录
 func (s *UserService) Login(username, password string) (*model.User, error) {
-	var user model.User
-	if result := repository.DB.Where("username = ?", username).First(&user); result.Error != nil {
+	user, err := s.userRepo.GetByUsername(username)
+	if err != nil {
 		return nil, errors.New("用户名或密码错误")
 	}
 
@@ -57,30 +58,25 @@ func (s *UserService) Login(username, password string) (*model.User, error) {
 		return nil, errors.New("用户名或密码错误")
 	}
 
-	return &user, nil
+	return user, nil
 }
 
 // GetByID 根据ID获取用户
 func (s *UserService) GetByID(id string) (*model.User, error) {
-	var user model.User
-	if result := repository.DB.First(&user, "id = ?", id); result.Error != nil {
-		return nil, result.Error
-	}
-	return &user, nil
+	return s.userRepo.GetByID(id)
 }
 
 // GetByUsername 根据用户名获取用户
 func (s *UserService) GetByUsername(username string) (*model.User, error) {
-	var user model.User
-	if result := repository.DB.Where("username = ?", username).First(&user); result.Error != nil {
-		return nil, result.Error
-	}
-	return &user, nil
+	return s.userRepo.GetByUsername(username)
 }
 
 // GetStudentsByClassID 获取班级下的所有学生
 func (s *UserService) GetStudentsByClassID(classID string) ([]model.User, error) {
-	var students []model.User
-	result := repository.DB.Where("role = ? AND class_id = ?", "student", classID).Find(&students)
-	return students, result.Error
+	return s.userRepo.GetByClassID(classID)
+}
+
+// UpdateUser 更新用户信息
+func (s *UserService) UpdateUser(user *model.User) error {
+	return s.userRepo.Update(user)
 }

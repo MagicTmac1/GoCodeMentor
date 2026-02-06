@@ -5,16 +5,33 @@ import (
 	"GoCodeMentor/internal/pkg/siliconflow"
 	"GoCodeMentor/internal/repository"
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 )
 
 type SessionService struct {
-	client *siliconflow.Client
+	client      *siliconflow.Client
+	sessionRepo repository.ChatSessionRepository
+	messageRepo repository.ChatMessageRepository
+	userRepo    repository.UserRepository
+	classRepo   repository.ClassRepository
 }
 
-func NewSessionService(client *siliconflow.Client) *SessionService {
-	return &SessionService{client: client}
+func NewSessionService(
+	client *siliconflow.Client,
+	sessionRepo repository.ChatSessionRepository,
+	messageRepo repository.ChatMessageRepository,
+	userRepo repository.UserRepository,
+	classRepo repository.ClassRepository,
+) ISessionService {
+	return &SessionService{
+		client:      client,
+		sessionRepo: sessionRepo,
+		messageRepo: messageRepo,
+		userRepo:    userRepo,
+		classRepo:   classRepo,
+	}
 }
 
 // Chat 对话并保存历史
@@ -22,12 +39,12 @@ func (s *SessionService) Chat(ctx context.Context, sessionID, userID, userQuesti
 	// 1. 如果没有 sessionID，创建新的
 	if sessionID == "" {
 		sessionID = uuid.New().String()
-		repository.DB.Create(&model.ChatSession{
+		s.sessionRepo.Create(&model.ChatSession{
 			ID:     sessionID,
 			UserID: userID,
 			Title:  userQuestion,
 		})
-		repository.DB.Create(&model.ChatMessage{
+		s.messageRepo.Create(&model.ChatMessage{
 			SessionID: sessionID,
 			Role:      "system",
 			Content:   "你是一位专业的 Go 语言助教，擅长用通俗的例子解释概念。请用中文回答，提供代码示例。",
@@ -35,18 +52,17 @@ func (s *SessionService) Chat(ctx context.Context, sessionID, userID, userQuesti
 	}
 
 	// 2. 保存用户问题
-	repository.DB.Create(&model.ChatMessage{
+	s.messageRepo.Create(&model.ChatMessage{
 		SessionID: sessionID,
 		Role:      "user",
 		Content:   userQuestion,
 	})
 
 	// 3. 查询历史消息
-	var messages []model.ChatMessage
-	repository.DB.Where("session_id = ?", sessionID).
-		Order("created_at asc").
-		Limit(41).
-		Find(&messages)
+	messages, err := s.messageRepo.GetBySessionID(sessionID)
+	if err != nil {
+		// even if we can't get history, we can still proceed
+	}
 
 	// 4. 调用 AI
 	var history []siliconflow.Message
@@ -62,7 +78,7 @@ func (s *SessionService) Chat(ctx context.Context, sessionID, userID, userQuesti
 	}
 
 	// 5. 保存 AI 回答
-	repository.DB.Create(&model.ChatMessage{
+	s.messageRepo.Create(&model.ChatMessage{
 		SessionID: sessionID,
 		Role:      "assistant",
 		Content:   answer,
@@ -70,9 +86,11 @@ func (s *SessionService) Chat(ctx context.Context, sessionID, userID, userQuesti
 
 	// 6. 更新会话标题
 	if len(messages) <= 2 {
-		repository.DB.Model(&model.ChatSession{}).Where("id = ?", sessionID).Updates(map[string]interface{}{
-			"title": userQuestion,
-		})
+		session, err := s.sessionRepo.GetByID(sessionID)
+		if err == nil {
+			session.Title = userQuestion
+			s.sessionRepo.Update(session)
+		}
 	}
 
 	return answer, sessionID, nil
@@ -80,67 +98,65 @@ func (s *SessionService) Chat(ctx context.Context, sessionID, userID, userQuesti
 
 // GetHistory 获取历史记录
 func (s *SessionService) GetHistory(sessionID, userID string) ([]model.ChatMessage, error) {
-	var session model.ChatSession
-	if result := repository.DB.First(&session, "id = ?", sessionID); result.Error != nil {
-		return nil, result.Error
+	session, err := s.sessionRepo.GetByID(sessionID)
+	if err != nil {
+		return nil, err
 	}
 
 	// 检查权限
-	var user model.User
-	repository.DB.First(&user, "id = ?", userID)
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, errors.New("当前用户不存在")
+	}
 
 	if user.Role == "student" && session.UserID != userID {
-		return nil, nil
+		return nil, errors.New("无权查看该会话")
 	}
 
 	if user.Role == "teacher" && session.UserID != userID {
-		var student model.User
-		repository.DB.First(&student, "id = ? AND role = ?", session.UserID, "student")
-		if student.ClassID == nil {
-			return nil, nil
+		student, err := s.userRepo.GetByID(session.UserID)
+		if err != nil || student.Role != "student" {
+			return nil, errors.New("会话所属学生不存在")
 		}
-		var class model.Class
-		repository.DB.First(&class, "id = ?", *student.ClassID)
+		if student.ClassID == nil {
+			return nil, errors.New("学生未加入任何班级")
+		}
+		class, err := s.classRepo.GetByID(*student.ClassID)
+		if err != nil {
+			return nil, errors.New("学生所在班级不存在")
+		}
 		if class.TeacherID != userID {
-			return nil, nil
+			return nil, errors.New("无权查看该班级学生的会话")
 		}
 	}
 
-	var messages []model.ChatMessage
-	result := repository.DB.Where("session_id = ?", sessionID).
-		Order("created_at asc").
-		Find(&messages)
-	return messages, result.Error
+	return s.messageRepo.GetBySessionID(sessionID)
 }
 
 // GetUserSessions 获取用户的所有会话
 func (s *SessionService) GetUserSessions(userID string) ([]model.ChatSession, error) {
-	var sessions []model.ChatSession
-	result := repository.DB.Where("user_id = ?", userID).Order("updated_at desc").Find(&sessions)
-	return sessions, result.Error
+	return s.sessionRepo.GetByUserID(userID)
 }
 
 // GetStudentSessions 教师获取班级学生的会话
 func (s *SessionService) GetStudentSessions(teacherID, studentID string) ([]model.ChatSession, error) {
-	var student model.User
-	if result := repository.DB.First(&student, "id = ? AND role = ?", studentID, "student"); result.Error != nil {
-		return nil, result.Error
+	student, err := s.userRepo.GetByID(studentID)
+	if err != nil || student.Role != "student" {
+		return nil, errors.New("学生不存在")
 	}
 
 	if student.ClassID == nil {
-		return nil, nil
+		return []model.ChatSession{}, nil // Return empty slice instead of nil
 	}
 
-	var class model.Class
-	if result := repository.DB.First(&class, "id = ?", *student.ClassID); result.Error != nil {
-		return nil, result.Error
+	class, err := s.classRepo.GetByID(*student.ClassID)
+	if err != nil {
+		return nil, errors.New("班级不存在")
 	}
 
 	if class.TeacherID != teacherID {
-		return nil, nil
+		return nil, errors.New("无权查看该学生的会话")
 	}
 
-	var sessions []model.ChatSession
-	result := repository.DB.Where("user_id = ?", studentID).Order("updated_at desc").Find(&sessions)
-	return sessions, result.Error
+	return s.sessionRepo.GetByUserID(studentID)
 }

@@ -13,11 +13,24 @@ import (
 )
 
 type AssignmentService struct {
-	client *siliconflow.Client
+	client         *siliconflow.Client
+	assignmentRepo repository.AssignmentRepository
+	questionRepo   repository.QuestionRepository
+	submissionRepo repository.SubmissionRepository
 }
 
-func NewAssignmentService(client *siliconflow.Client) *AssignmentService {
-	return &AssignmentService{client: client}
+func NewAssignmentService(
+	client *siliconflow.Client,
+	assignmentRepo repository.AssignmentRepository,
+	questionRepo repository.QuestionRepository,
+	submissionRepo repository.SubmissionRepository,
+) IAssignmentService {
+	return &AssignmentService{
+		client:         client,
+		assignmentRepo: assignmentRepo,
+		questionRepo:   questionRepo,
+		submissionRepo: submissionRepo,
+	}
 }
 
 // GenerateAssignmentByAI AI生成作业
@@ -110,7 +123,7 @@ func (s *AssignmentService) GenerateAssignmentByAI(ctx context.Context, topic, d
 		Status:      "draft",
 	}
 
-	if err := repository.DB.Create(&assign).Error; err != nil {
+	if err := s.assignmentRepo.Create(&assign); err != nil {
 		return nil, err
 	}
 
@@ -127,7 +140,7 @@ func (s *AssignmentService) GenerateAssignmentByAI(ctx context.Context, topic, d
 			Score:        q.Score,
 			OrderNum:     i + 1,
 		}
-		repository.DB.Create(&question)
+		s.questionRepo.Create(&question)
 	}
 
 	return &assign, nil
@@ -135,10 +148,7 @@ func (s *AssignmentService) GenerateAssignmentByAI(ctx context.Context, topic, d
 
 // GetAssignmentList 获取教师的作业列表（包含草稿和已发布）
 func (s *AssignmentService) GetAssignmentList(teacherID string) ([]model.Assignment, error) {
-	var assignments []model.Assignment
-	// 查询当前教师的作业，以及teacher_id为空的作业（兼容旧数据）
-	result := repository.DB.Where("teacher_id = ? OR teacher_id = ? OR teacher_id IS NULL", teacherID, "").Order("created_at desc").Find(&assignments)
-	return assignments, result.Error
+	return s.assignmentRepo.GetByTeacherID(teacherID)
 }
 
 // GetAllAssignments 别名兼容
@@ -148,32 +158,33 @@ func (s *AssignmentService) GetAllAssignments() ([]model.Assignment, error) {
 
 // GetAssignmentsByClass 获取发布到指定班级的作业
 func (s *AssignmentService) GetAssignmentsByClass(classID string) ([]model.Assignment, error) {
-	var assignments []model.Assignment
-	result := repository.DB.Where("class_id = ? AND status = ?", classID, "published").Order("created_at desc").Find(&assignments)
-	return assignments, result.Error
+	return s.assignmentRepo.GetByClassID(classID)
 }
 
 // PublishAssignment 发布作业到班级
 func (s *AssignmentService) PublishAssignment(assignID, classID string) error {
-	// 更新作业状态为已发布
-	result := repository.DB.Model(&model.Assignment{}).Where("id = ?", assignID).Updates(map[string]interface{}{
-		"status":   "published",
-		"class_id": classID,
-	})
-	return result.Error
+	assign, err := s.assignmentRepo.GetByID(assignID)
+	if err != nil {
+		return err
+	}
+	assign.Status = "published"
+	assign.ClassID = &classID
+	return s.assignmentRepo.Update(assign)
 }
 
 // GetAssignmentDetail 获取作业详情（包含题目）
 func (s *AssignmentService) GetAssignmentDetail(assignID string) (*model.Assignment, []model.Question, error) {
-	var assign model.Assignment
-	if err := repository.DB.First(&assign, "id = ?", assignID).Error; err != nil {
+	assign, err := s.assignmentRepo.GetByID(assignID)
+	if err != nil {
 		return nil, nil, err
 	}
 
-	var questions []model.Question
-	repository.DB.Where("assignment_id = ?", assignID).Order("order_num asc").Find(&questions)
+	questions, err := s.questionRepo.GetByAssignmentID(assignID)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return &assign, questions, nil
+	return assign, questions, nil
 }
 
 // SubmitAssignment 提交作业
@@ -191,26 +202,28 @@ func (s *AssignmentService) SubmitAssignment(assignID, studentID, studentName st
 		Status:       "submitted",
 	}
 
-	return id, repository.DB.Create(&sub).Error
+	return id, s.submissionRepo.Create(&sub)
 }
 
 // GradeSubmission AI批改作业
 func (s *AssignmentService) GradeSubmission(ctx context.Context, subID string) error {
 	// 查询提交
-	var sub model.Submission
-	if err := repository.DB.First(&sub, "id = ?", subID).Error; err != nil {
+	sub, err := s.submissionRepo.GetByID(subID)
+	if err != nil {
 		return err
 	}
 
 	// 查询作业信息
-	var assign model.Assignment
-	if err := repository.DB.First(&assign, "id = ?", sub.AssignmentID).Error; err != nil {
+	assign, err := s.assignmentRepo.GetByID(sub.AssignmentID)
+	if err != nil {
 		return err
 	}
 
 	// 查询题目
-	var questions []model.Question
-	repository.DB.Where("assignment_id = ?", sub.AssignmentID).Find(&questions)
+	questions, err := s.questionRepo.GetByAssignmentID(sub.AssignmentID)
+	if err != nil {
+		return err
+	}
 
 	// 构建批改Prompt
 	prompt := fmt.Sprintf(`请作为严格的编程教师，批改以下作业：
@@ -262,7 +275,7 @@ func (s *AssignmentService) GradeSubmission(ctx context.Context, subID string) e
 		// 如果解析失败，保存原始文本
 		sub.AIFeedback = "AI返回格式错误，原始内容：\n" + response
 		sub.Status = "graded"
-		repository.DB.Save(&sub)
+		s.submissionRepo.Update(sub)
 		return nil
 	}
 
@@ -273,14 +286,20 @@ func (s *AssignmentService) GradeSubmission(ctx context.Context, subID string) e
 	sub.AIFeedback = result.Feedback + "\n\n改进建议：\n- " + joinStrings(result.Suggestions, "\n- ")
 	sub.Status = "graded"
 
-	return repository.DB.Save(&sub).Error
+	return s.submissionRepo.Update(sub)
 }
 
 // GetSubmission 获取提交详情
 func (s *AssignmentService) GetSubmission(subID string) (*model.Submission, error) {
-	var sub model.Submission
-	result := repository.DB.First(&sub, "id = ?", subID)
-	return &sub, result.Error
+	return s.submissionRepo.GetByID(subID)
+}
+
+func (s *AssignmentService) GetSubmissionByAssignmentAndStudent(assignmentID, studentID string) (*model.Submission, error) {
+	return s.submissionRepo.GetByAssignmentAndStudent(assignmentID, studentID)
+}
+
+func (s *AssignmentService) GetPendingSubmissionCountByAssignment(assignmentID string) (int64, error) {
+	return s.submissionRepo.CountByAssignmentID(assignmentID, "submitted")
 }
 
 func joinStrings(strs []string, sep string) string {
