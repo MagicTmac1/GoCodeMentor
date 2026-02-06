@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班级学生 - GoCodeMentor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .header {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        .header h1 { font-size: 20px; margin-bottom: 5px; }
+        .header p { font-size: 12px; opacity: 0.9; }
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            min-height: 70vh;
+        }
+        .content { padding: 20px; }
+        .btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-secondary { background: #6c757d; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>👥 班级学生 - GoCodeMentor</h1>
+        <p>AI驱动的智能教学平台</p>
+    </div>
+
+    <div class="container">
+        <div class="content">
+            <!-- 返回按钮 -->
+            <div style="margin-bottom: 20px;">
+                <a href="/teacher/classes" style="color: #667eea; text-decoration: none; font-size: 14px;">← 返回班级列表</a>
+            </div>
+            
+            <!-- 页面标题 -->
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="font-size: 28px; color: #333; margin-bottom: 10px;">👥 班级学生</h2>
+                <p id="classInfo" style="color: #666;">加载中...</p>
+            </div>
+            
+            <!-- 操作按钮 -->
+            <div style="max-width: 800px; margin: 0 auto 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="showAddStudentModal()" class="btn" style="padding: 8px 16px; font-size: 14px; display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 18px;">+</span> 添加学生
+                </button>
+                <button id="removeBtn" onclick="removeSelectedStudent()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; display: flex; align-items: center; gap: 5px;" disabled>
+                    <span style="font-size: 18px;">-</span> 移除学生
+                </button>
+            </div>
+            
+            <!-- 学生列表 -->
+            <div id="studentList" style="max-width: 800px; margin: 0 auto;">
+                <div style="text-align: center; color: #999; padding: 40px;">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加学生弹窗 -->
+    <div id="addStudentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto;">
+            <h3 style="margin-bottom: 20px;">添加学生</h3>
+            
+            <!-- 单条添加 -->
+            <div style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+                <label style="display: block; margin-bottom: 8px; color: #333; font-size: 14px;">单个添加</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="studentUsername" placeholder="请输入学生用户名" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                    <button onclick="addStudent()" class="btn" style="padding: 8px 20px;">添加</button>
+                </div>
+            </div>
+            
+            <!-- 批量导入 -->
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; color: #333; font-size: 14px;">批量导入（自动创建新用户）</label>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="font-size: 13px; color: #666; margin-bottom: 5px;">下载模板，填写学生信息后上传</p>
+                    <p style="font-size: 12px; color: #999; margin-bottom: 10px;">提示：学号不存在时会自动创建，初始密码123456</p>
+                    <a href="/api/templates/students" download class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; text-decoration: none; display: inline-block;">📥 下载模板</a>
+                </div>
+                <div style="border: 2px dashed #ddd; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('excelFile').click()">
+                    <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;" onchange="handleExcelUpload(this)">
+                    <div style="font-size: 32px; margin-bottom: 10px;">📁</div>
+                    <p style="color: #666; font-size: 14px;">点击选择Excel文件</p>
+                    <p style="color: #999; font-size: 12px; margin-top: 5px;">支持 .xlsx, .xls 格式</p>
+                </div>
+                <div id="uploadStatus" style="margin-top: 10px; font-size: 13px;"></div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="hideAddStudentModal()" class="btn btn-secondary" style="padding: 8px 20px;">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 检查是否已登录且是教师
+    const userId = localStorage.getItem('user_id');
+    const userRole = localStorage.getItem('user_role');
+
+    if (!userId) {
+        window.location.href = '/login';
+    } else if (userRole !== 'teacher') {
+        alert('只有教师可以访问此页面');
+        window.location.href = '/';
+    }
+
+    // 获取班级ID
+    const pathParts = window.location.pathname.split('/');
+    const classId = pathParts[2];
+
+    // 当前选中的学生ID
+    let selectedStudentId = null;
+    let studentsData = [];
+
+    // 加载班级信息和学生列表
+    async function loadClassInfo() {
+        try {
+            // 获取班级信息
+            const classRes = await fetch('/api/classes/' + classId, {
+                headers: {
+                    'X-User-ID': userId,
+                    'X-User-Role': userRole
+                }
+            });
+            
+            if (!classRes.ok) {
+                if (classRes.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                throw new Error('班级不存在');
+            }
+            
+            const classData = await classRes.json();
+            document.getElementById('classInfo').innerHTML = `
+                ${classData.Name || classData.name} | 邀请码: <span style="font-family: monospace; background: #f5f5f5; padding: 2px 8px; border-radius: 4px; color: #667eea; font-weight: bold;">${classData.Code || classData.code}</span>
+            `;
+            
+            // 获取学生列表
+            const studentsRes = await fetch('/api/classes/' + classId + '/students', {
+                headers: {
+                    'X-User-ID': userId,
+                    'X-User-Role': userRole
+                }
+            });
+            
+            if (!studentsRes.ok) {
+                throw new Error('加载学生列表失败');
+            }
+            
+            const students = await studentsRes.json();
+            studentsData = students;
+            selectedStudentId = null;
+            updateRemoveButton();
+            
+            const container = document.getElementById('studentList');
+            
+            if (students.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px; color: #999;">
+                        <div style="font-size: 64px; margin-bottom: 15px;">🎓</div>
+                        <p style="font-size: 16px; color: #666; margin-bottom: 10px;">当前班级暂无学生</p>
+                        <p style="font-size: 14px; margin-bottom: 20px;">请点击上方"+ 添加学生"按钮添加学生</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = students.map((s, idx) => `
+                <div id="student-${s.ID}" onclick="selectStudent('${s.ID}')" style="background: white; border-radius: 12px; padding: 20px 25px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 2px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold;">
+                            ${s.Name ? s.Name.charAt(0) : '?'}
+                        </div>
+                        <div>
+                            <h4 style="font-size: 16px; color: #333; margin-bottom: 3px;">${s.Name || '未知'}</h4>
+                            <p style="color: #999; font-size: 12px;">@${s.Username || s.ID}</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="event.stopPropagation(); viewStudentAssignments('${s.ID}', '${s.Name || '未知'}')" class="btn" style="padding: 8px 20px; font-size: 13px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                            查看作业
+                        </button>
+                        <button onclick="event.stopPropagation(); viewStudentChats('${s.ID}', '${s.Name || '未知'}')" class="btn" style="padding: 8px 20px; font-size: 13px;">
+                            查看答疑
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            document.getElementById('studentList').innerHTML = `
+                <div style="text-align: center; color: #999; padding: 40px;">
+                    <p>加载失败: ${e.message}</p>
+                    <button onclick="loadClassInfo()" style="margin-top: 15px; padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">重试</button>
+                </div>
+            `;
+        }
+    }
+
+    // 选择学生
+    function selectStudent(studentId) {
+        // 取消之前选中的样式
+        if (selectedStudentId) {
+            const prevEl = document.getElementById('student-' + selectedStudentId);
+            if (prevEl) {
+                prevEl.style.border = '2px solid #f0f0f0';
+            }
+        }
+        
+        // 如果点击的是已选中的，则取消选择
+        if (selectedStudentId === studentId) {
+            selectedStudentId = null;
+        } else {
+            // 选中新学生
+            selectedStudentId = studentId;
+            const newEl = document.getElementById('student-' + studentId);
+            if (newEl) {
+                newEl.style.border = '2px solid #667eea';
+            }
+        }
+        
+        updateRemoveButton();
+    }
+
+    // 更新移除按钮状态
+    function updateRemoveButton() {
+        const removeBtn = document.getElementById('removeBtn');
+        if (selectedStudentId) {
+            removeBtn.disabled = false;
+            removeBtn.style.opacity = '1';
+            removeBtn.style.cursor = 'pointer';
+        } else {
+            removeBtn.disabled = true;
+            removeBtn.style.opacity = '0.5';
+            removeBtn.style.cursor = 'not-allowed';
+        }
+    }
+
+    // 显示添加学生弹窗
+    function showAddStudentModal() {
+        document.getElementById('addStudentModal').style.display = 'flex';
+        document.getElementById('studentUsername').value = '';
+        document.getElementById('studentUsername').focus();
+    }
+
+    // 隐藏添加学生弹窗
+    function hideAddStudentModal() {
+        document.getElementById('addStudentModal').style.display = 'none';
+        document.getElementById('uploadStatus').innerHTML = '';
+        document.getElementById('excelFile').value = '';
+    }
+
+    // 处理Excel文件上传
+    async function handleExcelUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+        
+        const statusEl = document.getElementById('uploadStatus');
+        statusEl.innerHTML = '<span style="color: #667eea;">正在上传...</span>';
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const res = await fetch('/api/classes/' + classId + '/students/import', {
+                method: 'POST',
+                headers: {
+                    'X-User-ID': userId,
+                    'X-User-Role': userRole
+                },
+                body: formData
+            });
+            
+            const result = await res.json();
+            
+            if (res.ok) {
+                statusEl.innerHTML = `
+                    <div style="color: #28a745;">
+                        ✅ 导入完成！<br>
+                        成功: ${result.success}人(新建${result.created}人)，失败: ${result.failed}人
+                    </div>
+                `;
+                // 刷新学生列表
+                loadClassInfo();
+                
+                // 如果有失败记录，显示详情
+                if (result.fail_messages && result.fail_messages.length > 0) {
+                    console.log('导入失败详情:', result.fail_messages);
+                }
+            } else {
+                statusEl.innerHTML = `<span style="color: #dc3545;">❌ ${result.error || '导入失败'}</span>`;
+            }
+        } catch (e) {
+            statusEl.innerHTML = `<span style="color: #dc3545;">❌ 网络错误: ${e.message}</span>`;
+        }
+        
+        // 清空文件输入
+        input.value = '';
+    }
+
+    // 添加学生
+    async function addStudent() {
+        const username = document.getElementById('studentUsername').value.trim();
+        if (!username) {
+            alert('请输入学生用户名');
+            return;
+        }
+        
+        try {
+            // 先查找学生
+            const res = await fetch('/api/users/find?username=' + encodeURIComponent(username), {
+                headers: {
+                    'X-User-ID': userId,
+                    'X-User-Role': userRole
+                }
+            });
+            
+            if (!res.ok) {
+                alert('未找到该学生，请确认用户名正确');
+                return;
+            }
+            
+            const student = await res.json();
+            
+            // 将学生添加到班级
+            const addRes = await fetch('/api/classes/' + classId + '/students', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-User-ID': userId,
+                    'X-User-Role': userRole
+                },
+                body: JSON.stringify({ student_id: student.ID })
+            });
+            
+            if (addRes.ok) {
+                alert('添加成功！');
+                hideAddStudentModal();
+                loadClassInfo();
+            } else {
+                const err = await addRes.json();
+                alert('添加失败: ' + (err.error || '未知错误'));
+            }
+        } catch (e) {
+            alert('网络错误: ' + e.message);
+        }
+    }
+
+    // 移除选中的学生
+    async function removeSelectedStudent() {
+        if (!selectedStudentId) {
+            alert('请先选择要移除的学生');
+            return;
+        }
+        
+        if (!confirm('确定要移除该学生吗？')) {
+            return;
+        }
+        
+        try {
+            const res = await fetch('/api/classes/' + classId + '/students/' + selectedStudentId, {
+                method: 'DELETE',
+                headers: {
+                    'X-User-ID': userId,
+                    'X-User-Role': userRole
+                }
+            });
+            
+            if (res.ok) {
+                alert('移除成功！');
+                selectedStudentId = null;
+                loadClassInfo();
+            } else {
+                const err = await res.json();
+                alert('移除失败: ' + (err.error || '未知错误'));
+            }
+        } catch (e) {
+            alert('网络错误: ' + e.message);
+        }
+    }
+
+    function viewStudentChats(studentId, studentName) {
+        window.location.href = '/student/' + studentId + '/chats?name=' + encodeURIComponent(studentName);
+    }
+
+    function viewStudentAssignments(studentId, studentName) {
+        window.location.href = '/student_assignments.html?studentId=' + encodeURIComponent(studentId);
+    }
+
+    // 点击弹窗外部关闭
+    window.onclick = function(event) {
+        const modal = document.getElementById('addStudentModal');
+        if (event.target === modal) {
+            hideAddStudentModal();
+        }
+    }
+
+    // 页面加载时获取数据
+    loadClassInfo();
+    </script>
+</body>
+</html>

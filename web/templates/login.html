@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>用户登录 - GoCodeMentor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            margin-top: 10px;
+        }
+        .toggle-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .toggle-link a {
+            color: #667eea;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .tips {
+            margin-top: 30px;
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+            max-width: 400px;
+        }
+        .tips p {
+            margin: 5px 0;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="font-size: 64px; margin-bottom: 15px;">🎓</div>
+        <h1>GoCodeMentor</h1>
+        <p>AI驱动的智能教学平台</p>
+    </div>
+
+    <div class="login-box">
+        <h2 id="formTitle">🔐 用户登录</h2>
+        
+        <!-- 登录表单 -->
+        <div id="loginForm">
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="username" placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="password" placeholder="请输入密码">
+            </div>
+            <button class="btn" onclick="login()">登录</button>
+        </div>
+        
+        <!-- 注册表单 -->
+        <div id="registerForm" class="hidden">
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" id="regUsername" placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label>显示名称</label>
+                <input type="text" id="regName" placeholder="请输入显示名称">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="regPassword" placeholder="请输入密码">
+            </div>
+            <div class="form-group">
+                <label>角色</label>
+                <select id="regRole">
+                    <option value="student">学生</option>
+                    <option value="teacher">教师</option>
+                </select>
+            </div>
+            <button class="btn" onclick="register()">注册</button>
+            <button class="btn btn-secondary" onclick="showLogin()">返回登录</button>
+        </div>
+        
+        <div class="toggle-link" id="toggleArea">
+            <span id="toggleText">还没有账号？</span>
+            <a onclick="toggleForm()" id="toggleLink">立即注册</a>
+        </div>
+    </div>
+    
+    <div class="tips">
+        <p>💡 首次使用？点击"立即注册"创建账号</p>
+        <p>👨‍🏫 教师可创建班级，查看学生答疑</p>
+        <p>👨‍🎓 学生可加入班级，进行课堂答疑</p>
+    </div>
+
+    <script>
+        let isLogin = true;
+
+        function toggleForm() {
+            isLogin = !isLogin;
+            document.getElementById('loginForm').classList.toggle('hidden');
+            document.getElementById('registerForm').classList.toggle('hidden');
+            document.getElementById('formTitle').textContent = isLogin ? '🔐 用户登录' : '📝 用户注册';
+            document.getElementById('toggleText').textContent = isLogin ? '还没有账号？' : '已有账号？';
+            document.getElementById('toggleLink').textContent = isLogin ? '立即注册' : '立即登录';
+        }
+
+        function showLogin() {
+            isLogin = true;
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('formTitle').textContent = '🔐 用户登录';
+            document.getElementById('toggleText').textContent = '还没有账号？';
+            document.getElementById('toggleLink').textContent = '立即注册';
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                alert('请填写完整信息');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password})
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    // 存储到 localStorage 供前端使用
+                    localStorage.setItem('user_id', data.id);
+                    localStorage.setItem('user_name', data.name);
+                    localStorage.setItem('user_role', data.role);
+                    // 同时设置 Cookie 供后端验证
+                    document.cookie = `user_id=${data.id}; path=/; max-age=${7*24*60*60}`;
+                    document.cookie = `user_role=${data.role}; path=/; max-age=${7*24*60*60}`;
+                    document.cookie = `user_name=${data.name}; path=/; max-age=${7*24*60*60}`;
+                    window.location.href = '/';
+                } else {
+                    alert(data.error || '登录失败');
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('regUsername').value.trim();
+            const name = document.getElementById('regName').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const role = document.getElementById('regRole').value;
+            
+            if (!username || !name || !password) {
+                alert('请填写完整信息');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password, name, role})
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    alert('注册成功，请登录');
+                    showLogin();
+                } else {
+                    alert(data.error || '注册失败');
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+
+        // 检查是否已登录
+        const userId = localStorage.getItem('user_id');
+        if (userId) {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+{{template "layout" .}}
+
+{{define "head"}}{{end}}
+
+{{define "assignment_content"}}
+<!-- 页面标题区域 -->
+<div style="text-align: center; margin-bottom: 30px; padding: 20px 0;">
+    <h2 style="font-size: 28px; color: #333; margin-bottom: 20px; font-weight: 600;">📝 作业管理</h2>
+    <div style="display: flex; justify-content: center; gap: 15px;">
+        <button onclick="showAIGenerate()" class="btn" style="padding: 12px 24px; font-size: 14px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+            ✨ AI生成作业
+        </button>
+        <button onclick="showCreateForm()" class="btn btn-secondary" style="padding: 12px 24px; font-size: 14px;">
+            + 手动创建
+        </button>
+    </div>
+</div>
+
+<!-- AI生成表单 -->
+<div id="aiGenerateForm" style="display: none; background: #f5f5f5; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+    <h3>AI智能出题</h3>
+    <div style="margin-bottom: 15px;">
+        <label>知识点</label>
+        <input type="text" id="aiTopic" placeholder="例如：Goroutine并发编程" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+    </div>
+    <div style="margin-bottom: 15px;">
+        <label>难度</label>
+        <select id="aiDifficulty" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px;">
+            <option value="easy">初级</option>
+            <option value="medium" selected>中级</option>
+            <option value="hard">高级</option>
+        </select>
+    </div>
+    <button onclick="generateByAI()" class="btn">开始生成</button>
+    <button onclick="hideAIGenerate()" class="btn btn-secondary">取消</button>
+</div>
+
+<!-- 作业列表 -->
+<div id="assignmentList" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+    <p style="color: #999; text-align: center;">加载中...</p>
+</div>
+
+<!-- 二维码弹窗 -->
+<div id="qrModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; padding: 30px; border-radius: 20px; text-align: center;">
+        <h3>扫码答题</h3>
+        <img id="qrImg" src="" alt="二维码" style="margin: 20px 0; max-width: 256px;">
+        <p style="color: #666; font-size: 14px;">微信扫码或复制链接给学生</p>
+        <button onclick="closeQR()" class="btn btn-secondary">关闭</button>
+    </div>
+</div>
+
+<!-- 查看作业弹窗 -->
+<div id="viewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; padding: 30px; border-radius: 20px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto;">
+        <h2 id="viewTitle">作业详情</h2>
+        <div id="viewContent" style="margin: 20px 0;"></div>
+        <div style="text-align: right;">
+            <button onclick="closeView()" class="btn btn-secondary">关闭</button>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "assignment_scripts"}}
+<script>
+// 获取当前登录用户信息
+const userId = localStorage.getItem('user_id') || '';
+const userRole = localStorage.getItem('user_role') || '';
+
+function showCreateForm() {
+    alert('手动创建功能开发中，请使用AI生成');
+}
+
+function showAIGenerate() {
+    document.getElementById('aiGenerateForm').style.display = 'block';
+}
+function hideAIGenerate() {
+    document.getElementById('aiGenerateForm').style.display = 'none';
+}
+
+async function generateByAI() {
+    const topic = document.getElementById('aiTopic').value;
+    const difficulty = document.getElementById('aiDifficulty').value;
+    if (!topic) { alert('请输入知识点'); return; }
+    
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '生成中...';
+    
+    try {
+        const res = await fetch('/api/assignments/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-User-ID': userId,
+                'X-User-Role': userRole
+            },
+            body: JSON.stringify({topic, difficulty})
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert('生成成功！');
+            hideAIGenerate();
+            loadAssignments();
+        } else {
+            alert('生成失败：' + (data.error || '未知错误'));
+        }
+    } catch (e) {
+        alert('网络错误: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '开始生成';
+    }
+}
+
+async function loadAssignments() {
+    // 检查登录状态
+    if (!userId) {
+        document.getElementById('assignmentList').innerHTML = '<p style="color: red; text-align: center;">请先登录</p>';
+        setTimeout(() => window.location.href = '/login', 1500);
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/assignments', {
+            headers: {
+                'X-User-ID': userId,
+                'X-User-Role': userRole
+            }
+        });
+        
+        if (!res.ok) {
+            throw new Error('请求失败: ' + res.status);
+        }
+        
+        const data = await res.json();
+        const container = document.getElementById('assignmentList');
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p style="color: #999; text-align: center;">暂无作业</p>';
+            return;
+        }
+        
+        container.innerHTML = data.map(a => `
+            <div style="border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 15px; background: #fafafa;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h3>${a.Title}</h3>
+                        <p style="color: #666; margin: 8px 0; font-size: 14px;">${a.Description}</p>
+                        <span style="font-size: 12px; color: #999;">${new Date(a.CreatedAt).toLocaleDateString()}</span>
+                    </div>
+                    <div>
+                        <button onclick="viewAssignment('${a.ID}')" class="btn" style="padding: 6px 12px; font-size: 12px; margin-right: 8px;">
+                            查看
+                        </button>
+                        <button onclick="showQRCode('${a.ID}')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                            二维码
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        document.getElementById('assignmentList').innerHTML = '<p style="color: red;">加载失败</p>';
+    }
+}
+
+function showQRCode(id) {
+    document.getElementById('qrImg').src = '/api/assignments/' + id + '/qrcode';
+    document.getElementById('qrModal').style.display = 'flex';
+}
+
+function closeQR() {
+    document.getElementById('qrModal').style.display = 'none';
+}
+
+async function viewAssignment(id) {
+    try {
+        const res = await fetch('/api/assignments/' + id);
+        const data = await res.json();
+        
+        const assign = data.assignment || {};
+        const questions = data.questions || [];
+        
+        document.getElementById('viewTitle').textContent = assign.Title || '作业详情';
+        
+        let html = `
+            <p><strong>描述：</strong>${assign.Description || '无'}</p>
+            <p><strong>类型：</strong>${assign.Type || '未知'}</p>
+            <p><strong>状态：</strong>${assign.Status || '未知'}</p>
+            <p><strong>创建时间：</strong>${assign.CreatedAt ? new Date(assign.CreatedAt).toLocaleString() : '未知'}</p>
+        `;
+        
+        if (questions.length > 0) {
+            html += '<h3 style="margin-top: 20px;">题目列表</h3>';
+            questions.forEach((q, idx) => {
+                html += `
+                    <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin: 10px 0; background: #f9f9f9;">
+                        <p><strong>题目 ${idx + 1} (${q.type || q.Type}):</strong> ${q.content || q.Content}</p>
+                        ${(q.options || q.Options) ? `<p style="color: #666;">选项：${q.options || q.Options}</p>` : ''}
+                        <p style="color: #28a745;">答案：${q.answer || q.Answer || '暂无'}</p>
+                        <p style="color: #999; font-size: 12px;">分值：${q.score || q.Score}分</p>
+                    </div>
+                `;
+            });
+        }
+        
+        document.getElementById('viewContent').innerHTML = html;
+        document.getElementById('viewModal').style.display = 'flex';
+    } catch (e) {
+        alert('加载作业详情失败: ' + e.message);
+    }
+}
+
+function closeView() {
+    document.getElementById('viewModal').style.display = 'none';
+}
+
+// 页面加载时获取列表
+loadAssignments();
+</script>
+{{end}}

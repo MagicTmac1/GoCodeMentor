@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教师工作台 - GoCodeMentor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 24px;
+        }
+        .header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .header .user-info span {
+            font-size: 14px;
+        }
+        .header .user-info button {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .header .user-info button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .nav-tab {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .nav-tab:hover, .nav-tab.active {
+            background: white;
+            color: #667eea;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .section-title h2 {
+            font-size: 24px;
+            color: #333;
+        }
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        /* 班级卡片 */
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .class-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .class-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            border-color: #667eea;
+        }
+        .class-card h3 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .class-card .code {
+            display: inline-block;
+            background: #f0f0f0;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 15px;
+            font-family: monospace;
+        }
+        .class-card .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .class-card .stats div {
+            text-align: center;
+        }
+        .class-card .stats .num {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .class-card .stats .label {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+        
+        /* 弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        .modal-buttons button {
+            flex: 1;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #999;
+        }
+        .empty-state .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🎓 GoCodeMentor 教师工作台</h1>
+            <div class="user-info">
+                <span id="userName">加载中...</span>
+                <button onclick="logout()">退出登录</button>
+            </div>
+        </div>
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="switchTab('classes')">📚 我的班级</div>
+            <div class="nav-tab" onclick="switchTab('assignments')">📝 作业库</div>
+            <div class="nav-tab" onclick="switchTab('feedback')">💡 意见反馈</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 班级列表页面 -->
+        <div id="classesSection">
+            <div class="section-title">
+                <h2>我的班级</h2>
+                <button class="btn" onclick="showCreateModal()">+ 创建班级</button>
+            </div>
+            <div id="classList" class="class-grid">
+                <div class="empty-state">
+                    <div class="icon">📚</div>
+                    <h3>还没有创建班级</h3>
+                    <p>点击右上角按钮创建你的第一个班级</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 作业库页面 -->
+        <div id="assignmentsSection" style="display: none;">
+            <div class="section-title">
+                <h2>作业库</h2>
+                <button class="btn" onclick="createAssignment()">+ 创建作业</button>
+            </div>
+            <div id="assignmentList" class="class-grid">
+                <div class="empty-state">
+                    <div class="icon">📝</div>
+                    <h3>作业库为空</h3>
+                    <p>点击右上角按钮创建作业</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 发布作业弹窗 -->
+        <div id="publishModal" class="modal">
+            <div class="modal-content">
+                <h3>发布作业</h3>
+                <p style="margin-bottom: 15px; color: #666; font-size: 14px;">选择要发布到的班级</p>
+                <div class="form-group">
+                    <label>目标班级</label>
+                    <select id="publishClassId" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                        <option value="">请选择班级</option>
+                    </select>
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn" onclick="confirmPublish()">发布</button>
+                    <button class="btn btn-secondary" onclick="hidePublishModal()">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 意见反馈页面 -->
+        <div id="feedbackSection" style="display: none;">
+            <div class="section-title">
+                <h2>意见反馈</h2>
+            </div>
+            <div id="feedbackList">
+                <div class="empty-state">
+                    <div class="icon">💬</div>
+                    <h3>暂无反馈</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建班级弹窗 -->
+    <div id="createModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3>创建新班级</h3>
+            
+            <!-- 单个创建 -->
+            <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+                <div class="form-group">
+                    <label>班级名称</label>
+                    <input type="text" id="className" placeholder="例如：2024级软件工程1班">
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn" onclick="createClass()">创建</button>
+                </div>
+            </div>
+            
+            <!-- 批量导入 -->
+            <div>
+                <label style="display: block; margin-bottom: 10px; color: #333;">批量导入班级和学生</label>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="font-size: 13px; color: #666; margin-bottom: 5px;">下载模板，填写学生和班级信息后上传</p>
+                    <p style="font-size: 12px; color: #999; margin-bottom: 10px;">提示：会自动创建班级和学生，初始密码123456</p>
+                    <a href="/api/templates/classes" download class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; text-decoration: none; display: inline-block;">📥 下载模板</a>
+                </div>
+                <div style="border: 2px dashed #ddd; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('classExcelFile').click()">
+                    <input type="file" id="classExcelFile" accept=".xlsx,.xls" style="display: none;" onchange="handleClassExcelUpload(this)">
+                    <div style="font-size: 32px; margin-bottom: 10px;">📁</div>
+                    <p style="color: #666; font-size: 14px;">点击选择Excel文件</p>
+                    <p style="color: #999; font-size: 12px; margin-top: 5px;">支持 .xlsx, .xls 格式</p>
+                </div>
+                <div id="classUploadStatus" style="margin-top: 10px; font-size: 13px;"></div>
+            </div>
+            
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="hideCreateModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 获取用户信息
+        const userId = localStorage.getItem('user_id');
+        const userName = localStorage.getItem('user_name');
+        const userRole = localStorage.getItem('user_role');
+
+        // 检查登录状态
+        if (!userId || userRole !== 'teacher') {
+            window.location.href = '/login';
+        }
+
+        // 显示用户名
+        document.getElementById('userName').textContent = userName || '教师';
+
+        // 加载班级列表
+// 加载班级统计数据
+        async function loadClassStats(classId) {
+            try {
+                // 使用新的统计API获取完整数据
+                const statsRes = await fetch('/api/classes/' + classId + '/stats', {
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                
+                if (statsRes.ok) {
+                    const stats = await statsRes.json();
+                    
+                    // 更新学生数量
+                    const studentEl = document.getElementById('student-count-' + classId);
+                    if (studentEl) studentEl.textContent = stats.student_count;
+                    
+                    // 更新作业数量
+                    const assignEl = document.getElementById('assignment-count-' + classId);
+                    if (assignEl) assignEl.textContent = stats.assignment_count;
+                    
+                    // 更新待批改数量
+                    const pendingEl = document.getElementById('pending-count-' + classId);
+                    if (pendingEl) pendingEl.textContent = stats.pending_count;
+                } else {
+                    // 如果新的API失败，回退到旧的实现
+                    console.warn('新统计API失败，使用旧实现');
+                    await loadClassStatsFallback(classId);
+                }
+            } catch (e) {
+                console.error('加载班级统计失败:', e);
+                // 网络错误时也回退到旧实现
+                await loadClassStatsFallback(classId);
+            }
+        }
+        
+        // 回退实现（兼容旧版本）
+        async function loadClassStatsFallback(classId) {
+            try {
+                // 获取学生数量
+                const studentsRes = await fetch('/api/classes/' + classId + '/students', {
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                if (studentsRes.ok) {
+                    const students = await studentsRes.json();
+                    const el = document.getElementById('student-count-' + classId);
+                    if (el) el.textContent = students.length;
+                }
+                
+                // 获取作业数量
+                const assignmentsRes = await fetch('/api/assignments', {
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                if (assignmentsRes.ok) {
+                    const assignments = await assignmentsRes.json();
+                    const classAssignments = assignments.filter(a => a.class_id === classId);
+                    const assignEl = document.getElementById('assignment-count-' + classId);
+                    if (assignEl) assignEl.textContent = classAssignments.length;
+                }
+                
+                // 获取待批改数量
+                // 这里需要遍历所有作业来统计待批改数量
+                const pendingEl = document.getElementById('pending-count-' + classId);
+                if (pendingEl) {
+                    // 简单实现：显示"统计中"或0
+                    pendingEl.textContent = '0';
+                }
+            } catch (e) {
+                console.error('回退统计加载失败:', e);
+            }
+        }
+        
+        async function loadClasses() {
+            try {
+                const res = await fetch('/api/classes', {
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                
+                if (res.ok) {
+                    const classes = await res.json();
+                    const container = document.getElementById('classList');
+                    
+                    if (classes.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <div class="icon">📚</div>
+                                <h3>还没有创建班级</h3>
+                                <p>点击右上角按钮创建你的第一个班级</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // 异步加载每个班级的学生数量
+                    container.innerHTML = classes.map(c => `
+                        <div class="class-card" onclick="viewClass('${c.ID}')">
+                            <h3>${c.Name}</h3>
+                            <div class="code">邀请码: ${c.Code}</div>
+                            <div class="stats">
+                                <div>
+                                    <div class="num" id="student-count-${c.ID}">-</div>
+                                    <div class="label">学生</div>
+                                </div>
+                                <div>
+                                    <div class="num" id="assignment-count-${c.ID}">-</div>
+                                    <div class="label">作业</div>
+                                </div>
+                                <div>
+                                    <div class="num" id="pending-count-${c.ID}">-</div>
+                                    <div class="label">待批改</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    // 加载每个班级的统计数据
+                    classes.forEach(c => loadClassStats(c.ID));
+                }
+            } catch (e) {
+                console.error('加载班级失败:', e);
+            }
+        }
+
+        // 切换标签页
+        function switchTab(tab) {
+            // 更新导航标签样式
+            document.querySelectorAll('.nav-tab').forEach((t, index) => {
+                t.classList.remove('active');
+                if ((tab === 'classes' && index === 0) ||
+                    (tab === 'assignments' && index === 1) ||
+                    (tab === 'feedback' && index === 2)) {
+                    t.classList.add('active');
+                }
+            });
+            
+            // 显示/隐藏对应区域
+            document.getElementById('classesSection').style.display = tab === 'classes' ? 'block' : 'none';
+            document.getElementById('assignmentsSection').style.display = tab === 'assignments' ? 'block' : 'none';
+            document.getElementById('feedbackSection').style.display = tab === 'feedback' ? 'block' : 'none';
+            
+            // 如果切换到作业库，加载作业列表
+            if (tab === 'assignments') {
+                loadAssignments();
+            }
+            
+            // 如果切换到反馈，加载反馈列表
+            if (tab === 'feedback') {
+                loadFeedback();
+            }
+            
+            // 更新 URL（不刷新页面）
+            const url = new URL(window.location);
+            if (tab === 'classes') {
+                url.searchParams.delete('tab');
+            } else {
+                url.searchParams.set('tab', tab);
+            }
+            window.history.replaceState({}, '', url);
+        }
+        
+        // 页面加载时检查 URL 参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const defaultTab = urlParams.get('tab') || 'classes';
+        if (defaultTab !== 'classes') {
+            switchTab(defaultTab);
+        }
+
+        // 显示创建班级弹窗
+        function showCreateModal() {
+            document.getElementById('createModal').style.display = 'flex';
+        }
+
+        // 隐藏创建班级弹窗
+        function hideCreateModal() {
+            document.getElementById('createModal').style.display = 'none';
+            document.getElementById('className').value = '';
+            document.getElementById('classUploadStatus').innerHTML = '';
+            document.getElementById('classExcelFile').value = '';
+        }
+
+        // 处理班级Excel上传
+        async function handleClassExcelUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const statusEl = document.getElementById('classUploadStatus');
+            statusEl.innerHTML = '<span style="color: #667eea;">正在上传...</span>';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const res = await fetch('/api/classes/import', {
+                    method: 'POST',
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    },
+                    body: formData
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    statusEl.innerHTML = `
+                        <div style="color: #28a745;">
+                            ✅ 导入完成！<br>
+                            班级: 新建${result.class_success}个<br>
+                            学生: 成功${result.student_success}人(新建${result.student_created}人)，失败${result.student_failed}人
+                        </div>
+                    `;
+                    // 刷新班级列表
+                    loadClasses();
+                } else {
+                    statusEl.innerHTML = `<span style="color: #dc3545;">❌ ${result.error || '导入失败'}</span>`;
+                }
+            } catch (e) {
+                statusEl.innerHTML = `<span style="color: #dc3545;">❌ 网络错误: ${e.message}</span>`;
+            }
+            
+            input.value = '';
+        }
+
+        // 创建班级
+        async function createClass() {
+            const name = document.getElementById('className').value.trim();
+            if (!name) {
+                alert('请输入班级名称');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/classes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    },
+                    body: JSON.stringify({name})
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    alert(`班级创建成功！\n班级名称: ${name}\n邀请码: ${data.Code}`);
+                    hideCreateModal();
+                    loadClasses();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || '创建失败');
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+
+        // 查看班级详情
+        function viewClass(classId) {
+            window.location.href = `/class/${classId}/students`;
+        }
+
+        // 跳转到作业管理页面（手动创建 + AI生成）
+        function createAssignment() {
+            window.location.href = '/assignments';
+        }
+
+        // 加载作业列表
+        async function loadAssignments() {
+            try {
+                const res = await fetch('/api/assignments', {
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                
+                if (res.ok) {
+                    const assignments = await res.json();
+                    const container = document.getElementById('assignmentList');
+                    
+                    if (!assignments || assignments.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <div class="icon">📝</div>
+                                <h3>作业库为空</h3>
+                                <p>点击右上角按钮创建作业</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    container.innerHTML = assignments.map(a => `
+                        <div class="class-card">
+                            <h3>${a.Title}</h3>
+                            <div class="code" style="background: ${a.Status === 'published' ? '#d4edda' : '#fff3cd'}; color: ${a.Status === 'published' ? '#155724' : '#856404'};">
+                                ${a.Status === 'published' ? '✅ 已发布' : '📝 草稿'}
+                            </div>
+                            <p style="color: #666; font-size: 13px; margin: 10px 0;">${a.Description || '暂无描述'}</p>
+                            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                                ${a.Status === 'draft' ? 
+                                    `<button class="btn" style="flex: 1; padding: 8px;" onclick="showPublishModal('${a.ID}')">发布</button>` :
+                                    `<button class="btn btn-secondary" style="flex: 1; padding: 8px;" disabled>已发布</button>`
+                                }
+                                <button class="btn btn-secondary" style="padding: 8px 16px;" onclick="viewAssignment('${a.ID}')">查看</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error('加载作业失败:', e);
+            }
+        }
+        
+        // 加载反馈列表
+        async function loadFeedback() {
+            try {
+                const res = await fetch('/api/feedback');
+                if (res.ok) {
+                    const feedbacks = await res.json();
+                    const container = document.getElementById('feedbackList');
+                    
+                    if (!feedbacks || feedbacks.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <div class="icon">💬</div>
+                                <h3>暂无反馈</h3>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    container.innerHTML = feedbacks.map(f => `
+                        <div class="class-card" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <span style="background: ${f.Type === 'bug' ? '#ffebee' : f.Type === 'feature' ? '#e3f2fd' : '#f3e5f5'}; 
+                                        color: ${f.Type === 'bug' ? '#c62828' : f.Type === 'feature' ? '#1565c0' : '#6a1b9a'};
+                                        padding: 2px 8px; border-radius: 4px; font-size: 12px;">
+                                        ${f.Type === 'bug' ? '🐛 Bug' : f.Type === 'feature' ? '✨ 建议' : '💬 其他'}
+                                    </span>
+                                    <h4 style="margin: 8px 0;">${f.Title}</h4>
+                                    <p style="color: #666; font-size: 13px;">${f.Content}</p>
+                                </div>
+                            </div>
+                            <div style="margin-top: 10px; color: #999; font-size: 12px; display: flex; justify-content: space-between;">
+                                <span>${new Date(f.CreatedAt).toLocaleDateString()}</span>
+                                <span>👍 ${f.Likes || 0}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (e) {
+                console.error('加载反馈失败:', e);
+            }
+        }
+        
+        // 当前要发布的作业ID
+        let currentPublishAssignId = '';
+        
+        // 显示发布弹窗
+        async function showPublishModal(assignId) {
+            currentPublishAssignId = assignId;
+            // 加载班级列表到选择框
+            const select = document.getElementById('publishClassId');
+            select.innerHTML = '<option value="">请选择班级</option>';
+            
+            try {
+                const res = await fetch('/api/classes', {
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                if (res.ok) {
+                    const classes = await res.json();
+                    classes.forEach(c => {
+                        select.innerHTML += `<option value="${c.ID}">${c.Name}</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error('加载班级失败:', e);
+            }
+            
+            document.getElementById('publishModal').style.display = 'flex';
+        }
+        
+        // 隐藏发布弹窗
+        function hidePublishModal() {
+            document.getElementById('publishModal').style.display = 'none';
+            currentPublishAssignId = '';
+        }
+        
+        // 确认发布
+        async function confirmPublish() {
+            const classId = document.getElementById('publishClassId').value;
+            if (!classId) {
+                alert('请选择班级');
+                return;
+            }
+            
+            // 检查班级是否有学生
+            try {
+                const studentsRes = await fetch('/api/classes/' + classId + '/students', {
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                
+                if (studentsRes.ok) {
+                    const students = await studentsRes.json();
+                    if (students.length === 0) {
+                        alert('该班级暂无学生，无法发布作业');
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error('检查班级学生失败:', e);
+            }
+            
+            try {
+                const res = await fetch(`/api/assignments/${currentPublishAssignId}/publish`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    },
+                    body: JSON.stringify({class_id: classId})
+                });
+                
+                if (res.ok) {
+                    alert('作业发布成功！');
+                    hidePublishModal();
+                    loadAssignments();
+                    // 刷新班级统计
+                    loadClassStats(classId);
+                } else {
+                    const err = await res.json();
+                    alert(err.error || '发布失败');
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+        
+        // 查看作业详情
+        function viewAssignment(assignId) {
+            window.location.href = `/assignments?id=${assignId}`;
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.clear();
+            document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = 'user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            window.location.href = '/login';
+        }
+
+        // 页面加载时获取数据
+        loadClasses();
+        loadAssignments();
+    </script>
+</body>
+</html>

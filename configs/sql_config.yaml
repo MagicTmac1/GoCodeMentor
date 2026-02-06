@@ -1,0 +1,7 @@
+host: localhost
+port: "5432"
+username: postgres
+password: "123456"
+dbname: gocodementor
+sslmode: disable
+timezone: Asia/Shanghai

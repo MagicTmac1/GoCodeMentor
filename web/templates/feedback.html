@@ -1,0 +1,135 @@
+{{template "layout" .}}
+
+{{define "head"}}{{end}}
+
+{{define "feedback_content"}}
+<!-- 页面标题区域 -->
+<div style="text-align: center; margin-bottom: 30px; padding: 20px 0;">
+    <h2 style="font-size: 28px; color: #333; margin-bottom: 20px; font-weight: 600;">💡 意见反馈</h2>
+    <button onclick="showFeedbackForm()" class="btn" style="padding: 12px 24px; font-size: 14px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+        📝 发布反馈
+    </button>
+</div>
+
+<!-- 发布表单 -->
+<div id="feedbackForm" style="display: none; background: white; padding: 25px; border-radius: 16px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border: 1px solid #f0f0f0;">
+    <h3 style="margin-bottom: 20px; color: #333; font-size: 18px;">✏️ 发布新反馈</h3>
+    <div style="margin-bottom: 18px;">
+        <label style="display: block; margin-bottom: 6px; color: #555; font-size: 14px; font-weight: 500;">反馈类型</label>
+        <select id="fbType" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: #fafafa;">
+            <option value="bug">🐛 Bug报告</option>
+            <option value="feature">✨ 功能建议</option>
+            <option value="praise">👍 点赞表扬</option>
+            <option value="other">📝 其他</option>
+        </select>
+    </div>
+    <div style="margin-bottom: 18px;">
+        <label style="display: block; margin-bottom: 6px; color: #555; font-size: 14px; font-weight: 500;">标题</label>
+        <input type="text" id="fbTitle" placeholder="请简短描述你的反馈" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+    </div>
+    <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 6px; color: #555; font-size: 14px; font-weight: 500;">详细内容</label>
+        <textarea id="fbContent" placeholder="请详细描述你的问题或建议..." style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; height: 120px; font-size: 14px; resize: vertical;"></textarea>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button onclick="submitFeedback()" class="btn" style="padding: 10px 24px;">🚀 匿名发布</button>
+        <button onclick="hideFeedbackForm()" class="btn btn-secondary" style="padding: 10px 24px;">取消</button>
+    </div>
+</div>
+
+<div id="feedbackList">
+    <p style="color: #999; text-align: center;">加载中...</p>
+</div>
+{{end}}
+
+{{define "feedback_scripts"}}
+<script>
+function showFeedbackForm() {
+    document.getElementById('feedbackForm').style.display = 'block';
+}
+function hideFeedbackForm() {
+    document.getElementById('feedbackForm').style.display = 'none';
+}
+
+async function submitFeedback() {
+    const type = document.getElementById('fbType').value;
+    const title = document.getElementById('fbTitle').value;
+    const content = document.getElementById('fbContent').value;
+    
+    if (!title || !content) { alert('请填写完整'); return; }
+    
+    try {
+        const res = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                type, title, content,
+                anonymous_id: 'anon_' + Date.now()
+            })
+        });
+        if (res.ok) {
+            alert('发布成功！');
+            hideFeedbackForm();
+            loadFeedbacks();
+        }
+    } catch (e) {
+        alert('发布失败');
+    }
+}
+
+async function loadFeedbacks() {
+    try {
+        const res = await fetch('/api/feedback');
+        const data = await res.json();
+        const container = document.getElementById('feedbackList');
+        
+        if (data.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px; color: #999;">
+                    <div style="font-size: 48px; margin-bottom: 15px;">💬</div>
+                    <p style="font-size: 16px;">暂无反馈，快来发表第一条吧！</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const typeMap = {bug: '🐛 Bug', feature: '✨ 建议', praise: '👍 表扬', other: '📝 其他'};
+        
+        container.innerHTML = data.map(f => `
+            <div style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #f0f0f0; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'">
+                <!-- 头部：类型标签 + 标题 + 日期 -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                        <span style="font-size: 12px; padding: 4px 10px; border-radius: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: 500; white-space: nowrap;">${typeMap[f.Type] || f.Type}</span>
+                        <strong style="font-size: 16px; color: #333; line-height: 1.4;">${f.Title}</strong>
+                    </div>
+                    <span style="color: #999; font-size: 12px; white-space: nowrap; margin-left: 10px;">${new Date(f.CreatedAt).toLocaleDateString()}</span>
+                </div>
+                <!-- 内容 -->
+                <p style="color: #555; margin: 0 0 15px 0; line-height: 1.6; font-size: 14px; padding-left: 4px;">${f.Content}</p>
+                <!-- 底部：点赞按钮 -->
+                <div style="display: flex; justify-content: flex-end;">
+                    <button onclick="likeFeedback(${f.ID})" style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 20px; padding: 6px 16px; color: #666; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px; transition: all 0.2s;" onmouseover="this.style.background='#667eea';this.style.color='white';this.style.borderColor='#667eea'" onmouseout="this.style.background='#f8f9fa';this.style.color='#666';this.style.borderColor='#e0e0e0'">
+                        <span>👍</span>
+                        <span>${f.LikeCount || 0}</span>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (e) {
+        document.getElementById('feedbackList').innerHTML = '<p style="color: red;">加载失败</p>';
+    }
+}
+
+async function likeFeedback(id) {
+    try {
+        await fetch('/api/feedback/' + id + '/like', {method: 'POST'});
+        loadFeedbacks();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+loadFeedbacks();
+</script>
+{{end}}
