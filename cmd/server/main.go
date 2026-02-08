@@ -76,7 +76,7 @@ func main() {
 	client := siliconflow.NewClient()
 	userSvc := service.NewUserService(repos.UserRepo)
 	classSvc := service.NewClassService(repos.ClassRepo, repos.UserRepo)
-	assignSvc := service.NewAssignmentService(client, repos.AssignmentRepo, repos.QuestionRepo, repos.SubmissionRepo)
+	assignSvc := service.NewAssignmentService(repos.AssignmentRepo, repos.AssignmentClassRepo, repos.QuestionRepo, repos.SubmissionRepo, repos.UserRepo, repos.ClassRepo, client)
 	feedbackSvc := service.NewFeedbackService(repos.FeedbackRepo)
 	sessionSvc := service.NewSessionService(client, repos.SessionRepo, repos.MessageRepo, repos.UserRepo, repos.ClassRepo)
 

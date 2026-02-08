@@ -39,12 +39,33 @@ func NewClient() *Client {
 
 // Chat 非流式对话
 func (c *Client) Chat(ctx context.Context, systemPrompt, userMessage string) (string, error) {
+	return c.ChatCompletion(ctx, userMessage, nil)
+}
+
+// ChatCompletion AI对话补全（兼容旧接口）
+func (c *Client) ChatCompletion(ctx context.Context, prompt string, messages []Message) (string, error) {
+	// 构建消息列表
+	var openaiMessages []openai.ChatCompletionMessage
+
+	// 如果有历史消息，添加它们
+	if messages != nil && len(messages) > 0 {
+		for _, msg := range messages {
+			openaiMessages = append(openaiMessages, openai.ChatCompletionMessage{
+				Role:    msg.Role,
+				Content: msg.Content,
+			})
+		}
+	}
+
+	// 添加用户当前提示
+	openaiMessages = append(openaiMessages, openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Content: prompt,
+	})
+
 	resp, err := c.cli.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model: c.model,
-		Messages: []openai.ChatCompletionMessage{
-			{Role: openai.ChatMessageRoleSystem, Content: systemPrompt},
-			{Role: openai.ChatMessageRoleUser, Content: userMessage},
-		},
+		Model:    c.model,
+		Messages: openaiMessages,
 	})
 	if err != nil {
 		return "", err

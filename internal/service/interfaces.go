@@ -3,6 +3,7 @@ package service
 import (
 	"GoCodeMentor/internal/model"
 	"context"
+	"time"
 )
 
 type IUserService interface {
@@ -23,6 +24,7 @@ type IClassService interface {
 	LeaveClass(studentID string) error
 	AddStudentToClass(studentID, classID string) error
 	RemoveStudentFromClass(studentID, classID string) error
+	DeleteClass(classID string) error
 }
 
 type IAssignmentService interface {
@@ -30,13 +32,19 @@ type IAssignmentService interface {
 	GetAssignmentList(teacherID string) ([]model.Assignment, error)
 	GetAllAssignments() ([]model.Assignment, error)
 	GetAssignmentsByClass(classID string) ([]model.Assignment, error)
-	PublishAssignment(assignID, classID string) error
+	PublishAssignment(assignID, classID string, deadline *time.Time) error
+	GetPublishedClasses(assignID string) ([]model.AssignmentClassWithClassName, error)
 	GetAssignmentDetail(assignID string) (*model.Assignment, []model.Question, error)
 	SubmitAssignment(assignID, studentID, studentName string, answers map[string]string, code string) (string, error)
 	GradeSubmission(ctx context.Context, subID string) error
 	GetSubmission(subID string) (*model.Submission, error)
 	GetSubmissionByAssignmentAndStudent(assignmentID, studentID string) (*model.Submission, error)
 	GetPendingSubmissionCountByAssignment(assignmentID string) (int64, error)
+	UpdateSubmissionScore(submissionID string, score int) error
+	UpdateTeacherFeedback(submissionID string, feedback string) error
+	RegradeSubmission(submissionID string) error
+	GetSubmissionCodeForDownload(submissionID string) (string, string, error)
+	DeleteAssignment(assignID string) error
 }
 
 type IFeedbackService interface {

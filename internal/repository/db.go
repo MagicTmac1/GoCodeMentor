@@ -86,6 +86,7 @@ func InitDB() (*gorm.DB, error) {
 		&model.Question{},
 		&model.Submission{},
 		&model.Feedback{},
+		&model.AssignmentClass{},
 	)
 	if err != nil {
 		return nil, err

@@ -61,6 +61,7 @@ func Setup(
 		api.POST("/classes/join", classHandler.JoinClass)
 		api.POST("/classes/:id/students", classHandler.AddStudentToClass)
 		api.DELETE("/classes/:id/students/:studentId", classHandler.RemoveStudentFromClass)
+		api.DELETE("/classes/:id", classHandler.DeleteClass)
 		api.GET("/classes/:id/stats", classHandler.GetClassStats) // This method needs to be created
 
 		// User management
@@ -81,6 +82,14 @@ func Setup(
 		api.GET("/assignments/:id/qrcode", assignmentHandler.GetAssignmentQRCode)
 		api.POST("/assignments/:id/submit", assignmentHandler.SubmitAssignment)
 		api.GET("/assignments/:id/student/:studentId", assignmentHandler.GetAssignmentSubmissionForStudent)
+		api.GET("/assignments/:id/published", assignmentHandler.GetPublishedClasses)
+		api.DELETE("/assignments/:id", assignmentHandler.DeleteAssignment)
+
+		// Teacher submission management
+		api.PUT("/submissions/:id/score", assignmentHandler.UpdateSubmissionScore)
+		api.PUT("/submissions/:id/feedback", assignmentHandler.UpdateTeacherFeedback)
+		api.POST("/submissions/:id/regrade", assignmentHandler.RegradeSubmission)
+		api.GET("/submissions/:id/download", assignmentHandler.DownloadSubmissionCode)
 
 		// Feedback
 		api.POST("/feedback", feedbackHandler.CreateFeedback)

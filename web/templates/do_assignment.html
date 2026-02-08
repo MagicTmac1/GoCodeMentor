@@ -4,101 +4,289 @@
     <meta charset="UTF-8">
     <title>作业答题 - GoCodeMentor</title>
     <style>
-        body { font-family: Arial; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
         .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        h1 { color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        h1 { color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; margin-bottom: 20px; }
+        .deadline-info { 
+            background: #fff3cd; 
+            border-left: 4px solid #ffc107; 
+            padding: 12px 15px; 
+            border-radius: 6px; 
+            margin-bottom: 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        .deadline-info.warning { 
+            background: #f8d7da; 
+            border-left-color: #dc3545; 
+        }
+        .deadline-info.success { 
+            background: #d4edda; 
+            border-left-color: #28a745; 
+        }
+        .deadline-icon { font-size: 18px; }
+        .deadline-text { font-size: 14px; flex-grow: 1; }
         .question { margin: 20px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; }
-        input, textarea { width: 100%; padding: 10px; margin-top: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 30px; border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 20px; }
+        input, textarea { 
+            width: 100%; 
+            padding: 10px; 
+            margin-top: 8px; 
+            border: 1px solid #ddd; 
+            border-radius: 4px; 
+            font-family: 'Consolas', 'Monaco', monospace; 
+            font-size: 14px; 
+        }
+        button { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            border: none; 
+            padding: 12px 30px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            margin-top: 20px; 
+        }
+        button:disabled { 
+            background: #cccccc; 
+            cursor: not-allowed; 
+        }
         .result { margin-top: 20px; padding: 20px; background: #e3f2fd; border-radius: 8px; display: none; }
+        .error-message { 
+            color: #dc3545; 
+            background: #f8d7da; 
+            padding: 12px; 
+            border-radius: 6px; 
+            margin-bottom: 15px; 
+            display: none; 
+        }
+        .time-remaining { 
+            font-weight: bold; 
+            color: #dc3545; 
+            background: white; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            margin-left: 5px; 
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>作业答题</h1>
+        <div id="deadlineInfo" style="display: none;"></div>
+        <div id="errorMessage" class="error-message"></div>
         <div id="assignmentContent">加载中...</div>
     </div>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const assignId = urlParams.get('id');
+        let assignmentDeadline = null;
+        let isExpired = false;
         
         async function loadAssignment() {
             try {
                 const res = await fetch('/api/assignments/' + assignId);
                 const data = await res.json();
                 
-                let html = `<h2>${data.assignment.Title}</h2><p>${data.assignment.Description}</p>`;
+                // 检查作业截止时间
+                if (data.assignment && data.assignment.Deadline) {
+                    assignmentDeadline = new Date(data.assignment.Deadline);
+                    const now = new Date();
+                    const timeRemaining = assignmentDeadline - now;
+                    
+                    // 计算剩余时间
+                    const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                    
+                    let deadlineClass = 'deadline-info';
+                    let deadlineMessage = '';
+                    let icon = '⏰';
+                    
+                    if (timeRemaining <= 0) {
+                        isExpired = true;
+                        deadlineClass = 'deadline-info warning';
+                        deadlineMessage = `⚠️ 作业提交已截止（截止时间：${assignmentDeadline.toLocaleString('zh-CN')}）`;
+                        icon = '⛔';
+                    } else if (timeRemaining < 24 * 60 * 60 * 1000) { // 小于1天
+                        deadlineClass = 'deadline-info warning';
+                        deadlineMessage = `⚠️ 作业即将截止（截止时间：${assignmentDeadline.toLocaleString('zh-CN')}）`;
+                        if (days === 0 && hours < 2) {
+                            deadlineMessage += `，剩余时间：${hours}小时${minutes}分钟`;
+                            icon = '🚨';
+                        } else {
+                            deadlineMessage += `，剩余${days}天${hours}小时`;
+                            icon = '⚠️';
+                        }
+                    } else {
+                        deadlineClass = 'deadline-info success';
+                        deadlineMessage = `✅ 作业可提交（截止时间：${assignmentDeadline.toLocaleString('zh-CN')}）`;
+                        deadlineMessage += `，剩余${days}天${hours}小时`;
+                        icon = '✅';
+                    }
+                    
+                    document.getElementById('deadlineInfo').innerHTML = `
+                        <div class="${deadlineClass}">
+                            <span class="deadline-icon">${icon}</span>
+                            <span class="deadline-text">${deadlineMessage}</span>
+                        </div>
+                    `;
+                    document.getElementById('deadlineInfo').style.display = 'block';
+                }
+                
+                let html = `<h2>${data.assignment.Title}</h2><p>${data.assignment.Description || '暂无描述'}</p>`;
                 
                 if (data.questions && data.questions.length > 0) {
                     data.questions.forEach((q, idx) => {
+                        const questionId = q.ID || q.id;
                         html += `<div class="question">
                             <p><strong>题目 ${idx+1} (${q.Type})</strong></p>
                             <p>${q.Content}</p>
                             ${q.Type === 'code' ? 
-                                `<textarea id="ans_${q.ID}" rows="6" placeholder="在此输入代码..."></textarea>` :
-                                `<input type="text" id="ans_${q.ID}" placeholder="你的答案">`
+                                `<textarea id="ans_${questionId}" rows="6" placeholder="在此输入代码..." ${isExpired ? 'disabled' : ''}></textarea>` :
+                                `<input type="text" id="ans_${questionId}" placeholder="你的答案" ${isExpired ? 'disabled' : ''}>`
                             }
                         </div>`;
                     });
                 } else {
-                    html += `<textarea id="code_answer" rows="10" placeholder="编程题：在此输入完整代码..."></textarea>`;
+                    html += `<textarea id="code_answer" rows="10" placeholder="编程题：在此输入完整代码..." ${isExpired ? 'disabled' : ''}></textarea>`;
                 }
+                
+                // 获取学生信息（从localStorage或cookie）
+                const userId = getCookie('user_id') || localStorage.getItem('user_id');
+                const userName = getCookie('user_name') || localStorage.getItem('user_name');
                 
                 html += `
                     <div style="margin-top: 20px;">
-                        <input type="text" id="studentName" placeholder="你的姓名" style="width: 200px; margin-right: 10px;">
-                        <button onclick="submit()">提交作业</button>
+                        <input type="text" id="studentName" placeholder="你的姓名" style="width: 200px; margin-right: 10px;" 
+                               value="${userName || ''}" ${isExpired ? 'disabled' : ''}>
+                        <button id="submitBtn" onclick="submit()" ${isExpired ? 'disabled' : ''}>
+                            ${isExpired ? '❌ 作业已截止' : '提交作业'}
+                        </button>
                     </div>
                     <div id="result" class="result"></div>
                 `;
                 
                 document.getElementById('assignmentContent').innerHTML = html;
+                
+                // 如果已过期，显示错误信息
+                if (isExpired) {
+                    document.getElementById('errorMessage').innerHTML = 
+                        '❌ 此作业提交已截止，无法继续提交。如有疑问请联系教师。';
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+                
             } catch (e) {
-                document.getElementById('assignmentContent').innerHTML = '<p style="color: red;">加载失败</p>';
+                document.getElementById('assignmentContent').innerHTML = '<p style="color: red;">加载失败：' + e.message + '</p>';
             }
         }
         
+        // 获取cookie辅助函数
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return '';
+        }
+        
         async function submit() {
+            // 再次检查是否过期（防止用户在页面停留时间过长）
+            if (isExpired) {
+                alert('作业已截止，无法提交！');
+                return;
+            }
+            
             const studentName = document.getElementById('studentName').value;
-            if (!studentName) { alert('请输入姓名'); return; }
+            if (!studentName) { 
+                alert('请输入姓名'); 
+                return; 
+            }
             
             const answers = {};
             document.querySelectorAll('[id^="ans_"]').forEach(el => {
-                answers[el.id.replace('ans_', '')] = el.value;
+                const questionId = el.id.replace('ans_', '');
+                answers[questionId] = el.value;
             });
             
             const code = document.getElementById('code_answer')?.value || '';
             
             try {
+                // 获取学生ID
+                const studentId = getCookie('user_id') || localStorage.getItem('user_id') || 'stu_' + Date.now();
+                
                 const res = await fetch('/api/submissions', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         assignment_id: assignId,
-                        student_id: 'stu_' + Date.now(),
+                        student_id: studentId,
                         student_name: studentName,
                         answers: answers,
                         code: code
                     })
                 });
+                
                 const data = await res.json();
                 if (data.error) {
-                    alert('提交失败：' + data.error);
+                    // 检查是否是截止时间相关的错误
+                    if (data.error.includes('截止') || data.error.includes('过期')) {
+                        isExpired = true;
+                        document.getElementById('submitBtn').disabled = true;
+                        document.getElementById('submitBtn').textContent = '❌ 作业已截止';
+                        document.getElementById('errorMessage').innerHTML = 
+                            '❌ ' + data.error + '，无法提交。';
+                        document.getElementById('errorMessage').style.display = 'block';
+                        alert(data.error);
+                    } else {
+                        alert('提交失败：' + data.error);
+                    }
                 } else {
                     document.getElementById('result').style.display = 'block';
                     document.getElementById('result').innerHTML = `
                         <h3>✅ 提交成功！</h3>
-                        <p>作业ID：${data.submission_id}</p>
+                        <p>提交ID：${data.id || data.submission_id}</p>
                         <p>AI正在批改中，请稍后查询成绩...</p>
                     `;
+                    
+                    // 禁用提交按钮防止重复提交
+                    document.getElementById('submitBtn').disabled = true;
+                    document.getElementById('submitBtn').textContent = '✅ 已提交';
+                    
+                    // 禁用所有输入框
+                    document.querySelectorAll('[id^="ans_"], #code_answer, #studentName').forEach(el => {
+                        el.disabled = true;
+                    });
                 }
             } catch (e) {
-                alert('提交失败');
+                alert('提交失败：' + e.message);
             }
         }
         
-        loadAssignment();
+        // 页面加载完成后执行
+        window.onload = loadAssignment;
+        
+        // 定期检查是否过期（每分钟检查一次）
+        if (assignId) {
+            setInterval(() => {
+                if (assignmentDeadline && !isExpired) {
+                    const now = new Date();
+                    if (now > assignmentDeadline) {
+                        isExpired = true;
+                        document.getElementById('submitBtn').disabled = true;
+                        document.getElementById('submitBtn').textContent = '❌ 作业已截止';
+                        document.getElementById('errorMessage').innerHTML = 
+                            '❌ 作业提交已截止，无法继续提交。';
+                        document.getElementById('errorMessage').style.display = 'block';
+                        
+                        // 禁用所有输入框
+                        document.querySelectorAll('[id^="ans_"], #code_answer, #studentName').forEach(el => {
+                            el.disabled = true;
+                        });
+                    }
+                }
+            }, 60000); // 每分钟检查一次
+        }
     </script>
 </body>
 </html>

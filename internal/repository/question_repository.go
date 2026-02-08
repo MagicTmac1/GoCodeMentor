@@ -25,3 +25,7 @@ func (r *questionRepository) GetByAssignmentID(assignmentID string) ([]model.Que
 	err := r.db.Where("assignment_id = ?", assignmentID).Order("order_num asc").Find(&questions).Error
 	return questions, err
 }
+
+func (r *questionRepository) DeleteByAssignmentID(assignmentID string) error {
+	return r.db.Where("assignment_id = ?", assignmentID).Delete(&model.Question{}).Error
+}

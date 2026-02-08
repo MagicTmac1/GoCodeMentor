@@ -4,6 +4,7 @@ import (
 	"GoCodeMentor/internal/service"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/skip2/go-qrcode"
@@ -92,10 +93,16 @@ func (h *AssignmentHandler) PublishAssignment(c *gin.Context) {
 	}
 
 	var req struct {
-		ClassID string `json:"class_id"`
+		ClassID  string `json:"class_id"`
+		Deadline string `json:"deadline"`
 	}
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": "参数错误"})
+		return
+	}
+
+	if req.ClassID == "" {
+		c.JSON(400, gin.H{"error": "班级ID不能为空"})
 		return
 	}
 
@@ -110,7 +117,30 @@ func (h *AssignmentHandler) PublishAssignment(c *gin.Context) {
 		return
 	}
 
-	err = h.assignSvc.PublishAssignment(assignID, req.ClassID)
+	// 处理截止时间（必填）
+	if req.Deadline == "" {
+		c.JSON(400, gin.H{"error": "截止时间不能为空"})
+		return
+	}
+
+	deadlineTime, err := time.Parse("2006-01-02", req.Deadline)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "截止时间格式错误，请使用YYYY-MM-DD格式"})
+		return
+	}
+
+	// 检查截止时间是否早于当前时间
+	now := time.Now()
+	if deadlineTime.Before(now) {
+		c.JSON(400, gin.H{"error": "截止时间不能早于当前时间"})
+		return
+	}
+
+	// 将时间设置为当天的23:59:59
+	endOfDay := time.Date(deadlineTime.Year(), deadlineTime.Month(), deadlineTime.Day(), 23, 59, 59, 0, deadlineTime.Location())
+	deadline := &endOfDay
+
+	err = h.assignSvc.PublishAssignment(assignID, req.ClassID, deadline)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -166,6 +196,22 @@ func (h *AssignmentHandler) SubmitAssignment(c *gin.Context) {
 			answers[k] = str
 		} else {
 			answers[k] = fmt.Sprintf("%v", v)
+		}
+	}
+
+	// 检查作业是否已过期
+	assign, _, err := h.assignSvc.GetAssignmentDetail(assignID)
+	if err != nil {
+		c.JSON(404, gin.H{"error": "作业不存在"})
+		return
+	}
+
+	// 检查截止时间
+	if assign.Deadline != nil {
+		now := time.Now()
+		if now.After(*assign.Deadline) {
+			c.JSON(400, gin.H{"error": "作业提交已截止，无法提交"})
+			return
 		}
 	}
 
@@ -352,16 +398,17 @@ func (h *AssignmentHandler) GetAssignmentSubmissionForStudent(c *gin.Context) {
 		}
 	} else {
 		submissionInfo = gin.H{
-			"submitted":      true,
-			"student_name":   submission.StudentName,
-			"answers":        submission.Answers,
-			"code":           submission.CodeContent,
-			"total_score":    submission.TotalScore,
-			"ai_feedback":    submission.AIFeedback,
-			"detailed_score": submission.DetailedScore,
-			"status":         submission.Status,
-			"created_at":     submission.CreatedAt,
-			"updated_at":     submission.UpdatedAt,
+			"submitted":        true,
+			"student_name":     submission.StudentName,
+			"answers":          submission.Answers,
+			"code":             submission.CodeContent,
+			"total_score":      submission.TotalScore,
+			"ai_feedback":      submission.AIFeedback,
+			"teacher_feedback": submission.TeacherFeedback,
+			"detailed_score":   submission.DetailedScore,
+			"status":           submission.Status,
+			"created_at":       submission.CreatedAt,
+			"updated_at":       submission.UpdatedAt,
 		}
 	}
 
@@ -370,4 +417,171 @@ func (h *AssignmentHandler) GetAssignmentSubmissionForStudent(c *gin.Context) {
 		"questions":  questions,
 		"submission": submissionInfo,
 	})
+}
+
+// UpdateSubmissionScore handles updating a submission score manually by teacher.
+func (h *AssignmentHandler) UpdateSubmissionScore(c *gin.Context) {
+	submissionID := c.Param("id")
+	userID := c.GetHeader("X-User-ID")
+	userRole := c.GetHeader("X-User-Role")
+
+	if userID == "" || userRole != "teacher" {
+		c.JSON(403, gin.H{"error": "只有教师可以修改分数"})
+		return
+	}
+
+	var req struct {
+		Score int `json:"score"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "参数错误"})
+		return
+	}
+
+	if req.Score < 0 || req.Score > 100 {
+		c.JSON(400, gin.H{"error": "分数必须在0-100之间"})
+		return
+	}
+
+	err := h.assignSvc.UpdateSubmissionScore(submissionID, req.Score)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "分数更新成功"})
+}
+
+// UpdateTeacherFeedback handles updating teacher feedback for a submission.
+func (h *AssignmentHandler) UpdateTeacherFeedback(c *gin.Context) {
+	submissionID := c.Param("id")
+	userID := c.GetHeader("X-User-ID")
+	userRole := c.GetHeader("X-User-Role")
+
+	if userID == "" || userRole != "teacher" {
+		c.JSON(403, gin.H{"error": "只有教师可以添加批注"})
+		return
+	}
+
+	var req struct {
+		Feedback string `json:"feedback"`
+	}
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": "参数错误"})
+		return
+	}
+
+	err := h.assignSvc.UpdateTeacherFeedback(submissionID, req.Feedback)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "批注更新成功"})
+}
+
+// RegradeSubmission handles triggering AI regrading for a submission.
+func (h *AssignmentHandler) RegradeSubmission(c *gin.Context) {
+	submissionID := c.Param("id")
+	userID := c.GetHeader("X-User-ID")
+	userRole := c.GetHeader("X-User-Role")
+
+	if userID == "" || userRole != "teacher" {
+		c.JSON(403, gin.H{"error": "只有教师可以重新批改"})
+		return
+	}
+
+	err := h.assignSvc.RegradeSubmission(submissionID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "重新批改已触发，请稍后查看结果"})
+}
+
+// GetPublishedClasses handles getting the list of classes an assignment is published to.
+func (h *AssignmentHandler) GetPublishedClasses(c *gin.Context) {
+	assignID := c.Param("id")
+	userID := c.GetHeader("X-User-ID")
+	userRole := c.GetHeader("X-User-Role")
+
+	if userID == "" || userRole != "teacher" {
+		c.JSON(403, gin.H{"error": "只有教师可以查看发布信息"})
+		return
+	}
+
+	// 验证教师是否有权查看此作业的发布信息
+	assign, _, err := h.assignSvc.GetAssignmentDetail(assignID)
+	if err != nil {
+		c.JSON(404, gin.H{"error": "作业不存在"})
+		return
+	}
+
+	if assign.TeacherID != userID {
+		c.JSON(403, gin.H{"error": "无权查看其他教师的作业发布信息"})
+		return
+	}
+
+	publishedClasses, err := h.assignSvc.GetPublishedClasses(assignID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, publishedClasses)
+}
+
+// DownloadSubmissionCode handles downloading student's code as a file.
+func (h *AssignmentHandler) DownloadSubmissionCode(c *gin.Context) {
+	submissionID := c.Param("id")
+	userID := c.GetHeader("X-User-ID")
+	userRole := c.GetHeader("X-User-Role")
+
+	if userID == "" || userRole != "teacher" {
+		c.JSON(403, gin.H{"error": "只有教师可以下载代码"})
+		return
+	}
+
+	code, fileName, err := h.assignSvc.GetSubmissionCodeForDownload(submissionID)
+	if err != nil {
+		c.JSON(404, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Header("Content-Type", "text/plain; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileName))
+	c.String(200, code)
+}
+
+// DeleteAssignment handles deleting an assignment and all related data.
+func (h *AssignmentHandler) DeleteAssignment(c *gin.Context) {
+	assignID := c.Param("id")
+	userID := c.GetHeader("X-User-ID")
+	userRole := c.GetHeader("X-User-Role")
+
+	if userID == "" || userRole != "teacher" {
+		c.JSON(403, gin.H{"error": "只有教师可以删除作业"})
+		return
+	}
+
+	// 验证教师是否有权删除此作业
+	assign, _, err := h.assignSvc.GetAssignmentDetail(assignID)
+	if err != nil {
+		c.JSON(404, gin.H{"error": "作业不存在"})
+		return
+	}
+
+	if assign.TeacherID != userID {
+		c.JSON(403, gin.H{"error": "无权删除其他教师的作业"})
+		return
+	}
+
+	err = h.assignSvc.DeleteAssignment(assignID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "作业删除成功"})
 }

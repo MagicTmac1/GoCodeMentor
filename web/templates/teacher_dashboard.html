@@ -224,6 +224,87 @@
             margin-bottom: 10px;
             color: #666;
         }
+        
+        /* 班级发布列表项 */
+        .class-publish-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+        .class-publish-item .class-info {
+            flex: 1;
+        }
+        .class-publish-item .class-name {
+            font-weight: 500;
+            color: #333;
+        }
+        .class-publish-item .student-count {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 2px;
+        }
+        .class-publish-item .deadline-input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 150px;
+            font-size: 13px;
+        }
+        .class-publish-item .action-btn {
+            padding: 6px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            min-width: 80px;
+        }
+        .class-publish-item .action-btn.publish {
+            background: #28a745;
+            color: white;
+        }
+        .class-publish-item .action-btn.published {
+            background: #6c757d;
+            color: white;
+            cursor: not-allowed;
+        }
+        
+        /* 作业卡片操作按钮 */
+        .assignment-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        .published-classes {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        .published-classes span {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
@@ -247,7 +328,13 @@
         <div id="classesSection">
             <div class="section-title">
                 <h2>我的班级</h2>
-                <button class="btn" onclick="showCreateModal()">+ 创建班级</button>
+                <div style="position: relative; display: inline-block;">
+                    <button class="btn" id="classManagementBtn" onclick="toggleClassDropdown()">📚 班级管理</button>
+                    <div id="classDropdown" style="display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 180px; z-index: 1000; margin-top: 5px;">
+                        <button class="dropdown-item" onclick="showCreateModal(); hideClassDropdown()" style="width: 100%; padding: 12px 16px; background: none; border: none; text-align: left; cursor: pointer; font-size: 14px; color: #333; border-bottom: 1px solid #f0f0f0;">+ 创建班级</button>
+                        <button class="dropdown-item" onclick="showDeleteClassModal(); hideClassDropdown()" style="width: 100%; padding: 12px 16px; background: none; border: none; text-align: left; cursor: pointer; font-size: 14px; color: #dc3545;">🗑️ 删除班级</button>
+                    </div>
+                </div>
             </div>
             <div id="classList" class="class-grid">
                 <div class="empty-state">
@@ -273,19 +360,18 @@
             </div>
         </div>
         
-        <!-- 发布作业弹窗 -->
+        <!-- 智能发布作业弹窗（支持多班级发布） -->
         <div id="publishModal" class="modal">
-            <div class="modal-content">
-                <h3>发布作业</h3>
-                <p style="margin-bottom: 15px; color: #666; font-size: 14px;">选择要发布到的班级</p>
-                <div class="form-group">
-                    <label>目标班级</label>
-                    <select id="publishClassId" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
-                        <option value="">请选择班级</option>
-                    </select>
+            <div class="modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto;">
+                <h3>发布作业到多个班级</h3>
+                <p style="margin-bottom: 20px; color: #666; font-size: 14px;">选择要发布作业的班级，已发布的班级显示为"已发放"</p>
+                
+                <div id="classListForPublish" style="margin-bottom: 20px;">
+                    <!-- 班级列表将动态加载 -->
                 </div>
+                
                 <div class="modal-buttons">
-                    <button class="btn" onclick="confirmPublish()">发布</button>
+                    <button class="btn" onclick="confirmMultiPublish()">确认发布</button>
                     <button class="btn btn-secondary" onclick="hidePublishModal()">取消</button>
                 </div>
             </div>
@@ -667,15 +753,27 @@
                                 ${a.Status === 'published' ? '✅ 已发布' : '📝 草稿'}
                             </div>
                             <p style="color: #666; font-size: 13px; margin: 10px 0;">${a.Description || '暂无描述'}</p>
-                            <div style="margin-top: 15px; display: flex; gap: 10px;">
-                                ${a.Status === 'draft' ? 
-                                    `<button class="btn" style="flex: 1; padding: 8px;" onclick="showPublishModal('${a.ID}')">发布</button>` :
-                                    `<button class="btn btn-secondary" style="flex: 1; padding: 8px;" disabled>已发布</button>`
-                                }
+                            
+                            <!-- 已发布班级信息 -->
+                            <div id="published-classes-${a.ID}" class="published-classes">
+                                <!-- 已发布班级信息将动态加载 -->
+                            </div>
+                            
+                            <div class="assignment-actions">
+                                <button class="btn" style="flex: 1; padding: 8px;" onclick="showMultiPublishModal('${a.ID}')">
+                                    ${a.Status === 'published' ? '📤 管理发布' : '📤 发布'}
+                                </button>
                                 <button class="btn btn-secondary" style="padding: 8px 16px;" onclick="viewAssignment('${a.ID}')">查看</button>
+                                <button class="delete-btn" onclick="deleteAssignment('${a.ID}')">
+                                    🗑️ 删除
+                                </button>
                             </div>
                         </div>
                     `).join('');
+                    // 动态加载每个作业的已发布班级信息
+                    assignments.forEach(a => {
+                        loadPublishedClasses(a.ID);
+                    });
                 }
             } catch (e) {
                 console.error('加载作业失败:', e);
@@ -769,6 +867,12 @@
                 return;
             }
             
+            const deadline = document.getElementById('publishDeadline').value;
+            if (!deadline) {
+                alert('请选择截止时间');
+                return;
+            }
+            
             // 检查班级是否有学生
             try {
                 const studentsRes = await fetch('/api/classes/' + classId + '/students', {
@@ -797,7 +901,7 @@
                         'X-User-ID': userId,
                         'X-User-Role': userRole
                     },
-                    body: JSON.stringify({class_id: classId})
+                    body: JSON.stringify({class_id: classId, deadline: deadline})
                 });
                 
                 if (res.ok) {
@@ -820,12 +924,380 @@
             window.location.href = `/assignments?id=${assignId}`;
         }
 
+        // 加载已发布班级信息
+        async function loadPublishedClasses(assignId) {
+            try {
+                const res = await fetch(`/api/assignments/${assignId}/published`, {
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                
+                if (res.ok) {
+                    const publishedClasses = await res.json();
+                    const container = document.getElementById(`published-classes-${assignId}`);
+                    
+                    if (publishedClasses && publishedClasses.length > 0) {
+                        container.innerHTML = '已发布到: ' + publishedClasses.map(pc => {
+                            let deadlineText = '';
+                            if (pc.deadline) {
+                                try {
+                                    const date = new Date(pc.deadline);
+                                    if (!isNaN(date.getTime())) {
+                                        deadlineText = ` (${date.toLocaleDateString('zh-CN')})`;
+                                    }
+                                } catch (e) {
+                                    // 日期解析失败，不显示日期
+                                }
+                            }
+                            return `<span>${pc.class_name}${deadlineText}</span>`;
+                        }).join('');
+                    } else {
+                        container.innerHTML = '';
+                    }
+                }
+            } catch (e) {
+                console.error('加载已发布班级失败:', e);
+            }
+        }
+        
+        // 显示智能发布弹窗（多班级发布）
+        async function showMultiPublishModal(assignId) {
+            currentPublishAssignId = assignId;
+            
+            // 加载班级列表和已发布状态
+            const container = document.getElementById('classListForPublish');
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">加载中...</div>';
+            
+            try {
+                // 同时获取教师的所有班级和该作业已发布的班级
+                const [classesRes, publishedRes] = await Promise.all([
+                    fetch('/api/classes?with_students=true', {
+                        headers: {
+                            'X-User-ID': userId,
+                            'X-User-Role': userRole
+                        }
+                    }),
+                    fetch(`/api/assignments/${assignId}/published`, {
+                        headers: {
+                            'X-User-ID': userId,
+                            'X-User-Role': userRole
+                        }
+                    })
+                ]);
+                
+                if (classesRes.ok) {
+                    const classes = await classesRes.json();
+                    const publishedClasses = publishedRes.ok ? await publishedRes.json() : [];
+                    
+                    // 创建已发布班级的映射，方便查找
+                    const publishedMap = {};
+                    publishedClasses.forEach(pc => {
+                        publishedMap[pc.class_id] = pc;
+                    });
+                    
+                    if (classes.length === 0) {
+                        container.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">暂无班级可发布</div>';
+                        return;
+                    }
+                    
+                    // 生成班级列表
+                    container.innerHTML = classes.map(c => {
+                        const isPublished = publishedMap[c.ID];
+                        const deadline = isPublished ? new Date(isPublished.deadline).toISOString().split('T')[0] : '';
+                        const studentCount = c.student_count || 0;
+                        
+                        return `
+                        <div class="class-publish-item" id="class-item-${c.ID}">
+                            <div class="class-info">
+                                <div class="class-name">${c.Name}</div>
+                                <div class="student-count">${studentCount}名学生</div>
+                            </div>
+                            <input type="date" 
+                                   class="deadline-input" 
+                                   id="deadline-${c.ID}" 
+                                   value="${deadline}"
+                                   min="${new Date().toISOString().split('T')[0]}"
+                                   ${isPublished ? 'disabled' : ''}
+                                   style="${isPublished ? 'background-color: #e9ecef; cursor: not-allowed;' : ''}">
+                            <button class="action-btn ${isPublished ? 'published' : 'publish'}" 
+                                    onclick="${isPublished ? '' : `publishToClass('${c.ID}')`}"
+                                    ${isPublished ? 'disabled' : ''}
+                                    id="btn-${c.ID}"
+                                    style="${isPublished ? 'cursor: not-allowed;' : ''}">
+                                ${isPublished ? '✅ 已发放' : '📤 发放'}
+                            </button>
+                        </div>
+                        `;
+                    }).join('');
+                    
+                    // 添加日期选择器的事件监听
+                    document.querySelectorAll('.deadline-input:not([disabled])').forEach(input => {
+                        input.addEventListener('change', function() {
+                            const classId = this.id.replace('deadline-', '');
+                            const publishBtn = document.getElementById(`btn-${classId}`);
+                            // 如果日期有效，启用按钮
+                            if (this.value) {
+                                publishBtn.disabled = false;
+                            } else {
+                                publishBtn.disabled = true;
+                            }
+                        });
+                    });
+                }
+            } catch (e) {
+                console.error('加载班级列表失败:', e);
+                container.innerHTML = '<div style="color: #dc3545; text-align: center;">加载失败，请刷新页面重试</div>';
+            }
+            
+            document.getElementById('publishModal').style.display = 'flex';
+        }
+        
+        // 发布到单个班级
+        async function publishToClass(classId) {
+            const deadlineInput = document.getElementById(`deadline-${classId}`);
+            const deadline = deadlineInput.value;
+            
+            if (!deadline) {
+                alert('请选择截止时间');
+                return;
+            }
+            
+            // 更新按钮状态为加载中
+            const publishBtn = document.getElementById(`btn-${classId}`);
+            const originalText = publishBtn.textContent;
+            publishBtn.textContent = '发布中...';
+            publishBtn.disabled = true;
+            
+            try {
+                const res = await fetch(`/api/assignments/${currentPublishAssignId}/publish`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    },
+                    body: JSON.stringify({class_id: classId, deadline: deadline})
+                });
+                
+                if (res.ok) {
+                    // 更新UI状态
+                    publishBtn.className = 'action-btn published';
+                    publishBtn.textContent = '已发放';
+                    publishBtn.disabled = true;
+                    deadlineInput.disabled = true;
+                    
+                    // 刷新已发布班级信息
+                    loadPublishedClasses(currentPublishAssignId);
+                    
+                    // 刷新班级统计
+                    loadClassStats(classId);
+                } else {
+                    const err = await res.json();
+                    alert(err.error || '发布失败');
+                    publishBtn.textContent = originalText;
+                    publishBtn.disabled = false;
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+                publishBtn.textContent = originalText;
+                publishBtn.disabled = false;
+            }
+        }
+        
+        // 确认多班级发布（批量操作）
+        async function confirmMultiPublish() {
+            // 获取所有未发布的班级
+            const publishButtons = document.querySelectorAll('.action-btn.publish:not([disabled])');
+            
+            if (publishButtons.length === 0) {
+                alert('没有需要发布的班级');
+                return;
+            }
+            
+            if (!confirm(`确定要发布到选中的 ${publishButtons.length} 个班级吗？`)) {
+                return;
+            }
+            
+            // 批量发布
+            for (const btn of publishButtons) {
+                const classId = btn.id.replace('btn-', '');
+                await publishToClass(classId);
+            }
+            
+            alert('批量发布完成！');
+            hidePublishModal();
+            loadAssignments();
+        }
+        
+        // 隐藏发布弹窗
+        function hidePublishModal() {
+            document.getElementById('publishModal').style.display = 'none';
+            currentPublishAssignId = '';
+        }
+        
+        // 删除作业
+        async function deleteAssignment(assignId) {
+            if (!confirm('⚠️ 确定要删除这个作业吗？这将删除作业的所有题目、发布记录和学生提交记录，操作不可恢复！')) {
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/api/assignments/${assignId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                
+                if (res.ok) {
+                    alert('作业删除成功！');
+                    loadAssignments();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || '删除失败');
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+
         // 退出登录
         function logout() {
             localStorage.clear();
             document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             document.cookie = 'user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             window.location.href = '/login';
+        }
+
+        // 班级管理下拉菜单
+        function toggleClassDropdown() {
+            const dropdown = document.getElementById('classDropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function hideClassDropdown() {
+            const dropdown = document.getElementById('classDropdown');
+            dropdown.style.display = 'none';
+        }
+
+        // 点击页面其他地方关闭下拉菜单
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('classDropdown');
+            const btn = document.getElementById('classManagementBtn');
+            if (dropdown && btn && !btn.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        // 显示删除班级弹窗
+        async function showDeleteClassModal() {
+            // 先获取班级列表
+            try {
+                const res = await fetch('/api/classes', {
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                
+                if (res.ok) {
+                    const classes = await res.json();
+                    if (classes.length === 0) {
+                        alert('暂无班级可删除');
+                        return;
+                    }
+                    
+                    // 创建弹窗内容
+                    let modalHtml = `
+                        <div id="deleteClassModal" class="modal">
+                            <div class="modal-content" style="max-width: 500px;">
+                                <h3>删除班级</h3>
+                                <p style="color: #666; font-size: 14px; margin-bottom: 20px;">
+                                    ⚠️ 警告：删除班级将同时删除该班级的所有学生数据，此操作不可恢复！
+                                </p>
+                                <div class="form-group">
+                                    <label>选择要删除的班级</label>
+                                    <select id="deleteClassSelect" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+                                        <option value="">请选择班级</option>
+                    `;
+                    
+                    classes.forEach(c => {
+                        modalHtml += `<option value="${c.ID}">${c.Name} (邀请码: ${c.Code})</option>`;
+                    });
+                    
+                    modalHtml += `
+                                    </select>
+                                </div>
+                                <div class="modal-buttons">
+                                    <button class="btn" style="background: #dc3545;" onclick="deleteClass()">删除</button>
+                                    <button class="btn btn-secondary" onclick="hideDeleteClassModal()">取消</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 移除现有弹窗（如果有）
+                    const existingModal = document.getElementById('deleteClassModal');
+                    if (existingModal) {
+                        existingModal.remove();
+                    }
+                    
+                    // 添加新弹窗
+                    const container = document.querySelector('.container');
+                    container.insertAdjacentHTML('beforeend', modalHtml);
+                    
+                    // 显示弹窗
+                    document.getElementById('deleteClassModal').style.display = 'flex';
+                }
+            } catch (e) {
+                console.error('加载班级失败:', e);
+                alert('加载班级列表失败: ' + e.message);
+            }
+        }
+
+        // 隐藏删除班级弹窗
+        function hideDeleteClassModal() {
+            const modal = document.getElementById('deleteClassModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // 删除班级
+        async function deleteClass() {
+            const classId = document.getElementById('deleteClassSelect').value;
+            if (!classId) {
+                alert('请选择要删除的班级');
+                return;
+            }
+            
+            if (!confirm('⚠️ 确定要删除这个班级吗？这将删除该班级的所有学生数据，操作不可恢复！')) {
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/classes/' + classId, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                
+                if (res.ok) {
+                    alert('班级删除成功！');
+                    hideDeleteClassModal();
+                    loadClasses();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || '删除失败');
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
         }
 
         // 页面加载时获取数据

@@ -41,3 +41,7 @@ func (r *userRepository) GetByClassID(classID string) ([]model.User, error) {
 func (r *userRepository) Update(user *model.User) error {
 	return r.db.Save(user).Error
 }
+
+func (r *userRepository) Delete(user *model.User) error {
+	return r.db.Delete(user).Error
+}

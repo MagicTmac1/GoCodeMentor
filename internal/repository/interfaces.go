@@ -11,6 +11,7 @@ type UserRepository interface {
 	GetByID(id string) (*model.User, error)
 	GetByClassID(classID string) ([]model.User, error)
 	Update(user *model.User) error
+	Delete(user *model.User) error
 }
 
 // ClassRepository defines the interface for class data operations.
@@ -19,6 +20,7 @@ type ClassRepository interface {
 	GetByID(id string) (*model.Class, error)
 	GetByCode(code string) (*model.Class, error)
 	GetByTeacherID(teacherID string) ([]model.Class, error)
+	Delete(id string) error
 }
 
 // AssignmentRepository defines the interface for assignment data operations.
@@ -28,12 +30,25 @@ type AssignmentRepository interface {
 	GetByTeacherID(teacherID string) ([]model.Assignment, error)
 	GetByClassID(classID string) ([]model.Assignment, error)
 	Update(assignment *model.Assignment) error
+	DeleteByID(id string) error
+}
+
+// AssignmentClassRepository defines the interface for assignment-class relationship operations.
+type AssignmentClassRepository interface {
+	Create(assignmentClass *model.AssignmentClass) error
+	GetByAssignmentID(assignmentID string) ([]model.AssignmentClass, error)
+	GetByClassID(classID string) ([]model.AssignmentClass, error)
+	GetByAssignmentAndClass(assignmentID, classID string) (*model.AssignmentClass, error)
+	Update(assignmentClass *model.AssignmentClass) error
+	DeleteByAssignmentID(assignmentID string) error
+	DeleteByAssignmentAndClass(assignmentID, classID string) error
 }
 
 // QuestionRepository defines the interface for question data operations.
 type QuestionRepository interface {
 	Create(question *model.Question) error
 	GetByAssignmentID(assignmentID string) ([]model.Question, error)
+	DeleteByAssignmentID(assignmentID string) error
 }
 
 // SubmissionRepository defines the interface for submission data operations.
@@ -43,6 +58,7 @@ type SubmissionRepository interface {
 	GetByAssignmentAndStudent(assignmentID, studentID string) (*model.Submission, error)
 	Update(submission *model.Submission) error
 	CountByAssignmentID(assignmentID string, status string) (int64, error)
+	DeleteByAssignmentID(assignmentID string) error
 }
 
 // ChatSessionRepository defines the interface for chat session data operations.

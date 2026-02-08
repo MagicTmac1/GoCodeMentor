@@ -125,3 +125,27 @@ func (s *ClassService) RemoveStudentFromClass(studentID, classID string) error {
 	user.ClassID = nil
 	return s.userRepo.Update(user)
 }
+
+// DeleteClass 删除班级（只有教师可以删除自己创建的班级）
+func (s *ClassService) DeleteClass(classID string) error {
+	// 首先验证班级是否存在
+	if _, err := s.classRepo.GetByID(classID); err != nil {
+		return errors.New("班级不存在")
+	}
+
+	// 注意：这里我们依赖上层handler已经验证了教师权限
+	// 删除班级前，需要先删除所有学生用户记录
+	students, err := s.userRepo.GetByClassID(classID)
+	if err == nil && len(students) > 0 {
+		// 批量删除学生用户记录
+		for _, student := range students {
+			if err := s.userRepo.Delete(&student); err != nil {
+				// 如果删除失败，记录错误但继续尝试
+				fmt.Printf("删除学生%s失败: %v\n", student.ID, err)
+			}
+		}
+	}
+
+	// 删除班级记录
+	return s.classRepo.Delete(classID)
+}

@@ -64,7 +64,10 @@ func (h *PageHandler) ClassStudentsPage(c *gin.Context) {
 
 // StudentChatsPage renders the student chats page.
 func (h *PageHandler) StudentChatsPage(c *gin.Context) {
-	c.File("web/templates/student_chats.html")
+	c.HTML(http.StatusOK, "student_chats.html", gin.H{
+		"Title": "学生答疑记录",
+		"Nav":   "",
+	})
 }
 
 // StudentAssignmentsPage renders the student assignments page.

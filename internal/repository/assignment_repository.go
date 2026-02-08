@@ -35,10 +35,19 @@ func (r *assignmentRepository) GetByTeacherID(teacherID string) ([]model.Assignm
 
 func (r *assignmentRepository) GetByClassID(classID string) ([]model.Assignment, error) {
 	var assignments []model.Assignment
-	err := r.db.Where("class_id = ? AND status = ?", classID, "published").Order("created_at desc").Find(&assignments).Error
+	// 查询通过assignment_class关联的作业，以及直接设置class_id的作业（向后兼容）
+	err := r.db.Distinct("assignments.*").
+		Joins("LEFT JOIN assignment_classes ac ON assignments.id = ac.assignment_id").
+		Where("(ac.class_id = ? OR assignments.class_id = ?) AND assignments.status = ?", classID, classID, "published").
+		Order("assignments.created_at desc").
+		Find(&assignments).Error
 	return assignments, err
 }
 
 func (r *assignmentRepository) Update(assignment *model.Assignment) error {
 	return r.db.Save(assignment).Error
+}
+
+func (r *assignmentRepository) DeleteByID(id string) error {
+	return r.db.Where("id = ?", id).Delete(&model.Assignment{}).Error
 }

@@ -191,6 +191,31 @@ func (h *ClassHandler) RemoveStudentFromClass(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "移除成功"})
 }
 
+// DeleteClass handles deleting a class.
+func (h *ClassHandler) DeleteClass(c *gin.Context) {
+	classID := c.Param("id")
+	userID := c.GetHeader("X-User-ID")
+	userRole := c.GetHeader("X-User-Role")
+
+	class, err := h.classSvc.GetClassByID(classID)
+	if err != nil {
+		c.JSON(404, gin.H{"error": "班级不存在"})
+		return
+	}
+
+	if userRole != "teacher" || class.TeacherID != userID {
+		c.JSON(403, gin.H{"error": "无权操作"})
+		return
+	}
+
+	if err := h.classSvc.DeleteClass(classID); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "班级删除成功"})
+}
+
 // GetClassStats handles getting statistics for a class.
 func (h *ClassHandler) GetClassStats(c *gin.Context) {
 	classID := c.Param("id")

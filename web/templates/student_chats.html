@@ -1,42 +1,235 @@
 {{template "layout" .}}
 
-{{define "head"}}{{end}}
+{{define "head"}}
+<style>
+    .chat-container {
+        display: flex;
+        height: 100%;
+    }
+    
+    .session-list {
+        width: 300px;
+        background: #f5f5f5;
+        border-right: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .session-list-header {
+        padding: 15px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .session-list-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+    }
+    
+    .session-item {
+        padding: 12px;
+        margin-bottom: 8px;
+        background: white;
+        color: #333;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+        border: 1px solid #eee;
+    }
+    
+    .session-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .session-item.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .session-item.active:hover {
+        background: #5a6fd6;
+    }
+    
+    .session-title {
+        font-weight: 500;
+        margin-bottom: 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .session-time {
+        font-size: 11px;
+        color: #999;
+    }
+    
+    .session-item.active .session-time {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .student-info {
+        padding: 20px;
+        border-bottom: 1px solid #e0e0e0;
+        background: white;
+        text-align: center;
+    }
+    
+    .student-avatar {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 20px;
+        font-weight: bold;
+        margin: 0 auto 10px;
+    }
+    
+    .student-name {
+        text-align: center;
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .student-subtitle {
+        text-align: center;
+        color: #999;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+    
+    .chat-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-header {
+        padding: 12px 20px;
+        background: white;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .chat-header-text {
+        font-size: 14px;
+        color: #666;
+    }
+    
+    .chat-header-session {
+        font-weight: 500;
+        color: #333;
+    }
+    
+    .chat-box {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #fafafa;
+    }
+    
+    .chat-welcome {
+        text-align: center;
+        color: #999;
+        font-size: 13px;
+        padding: 40px;
+    }
+    
+    .chat-welcome-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+    
+    .chat-message {
+        margin: 15px 0;
+        padding: 12px 16px;
+        border-radius: 12px;
+        max-width: 80%;
+        line-height: 1.6;
+    }
+    
+    .chat-message-user {
+        background: #667eea;
+        color: white;
+        margin-left: auto;
+    }
+    
+    .chat-message-assistant {
+        background: white;
+        border: 1px solid #e0e0e0;
+        margin-right: auto;
+    }
+    
+    .back-button {
+        color: #667eea;
+        text-decoration: none;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    .back-button:hover {
+        text-decoration: underline;
+    }
+    
+    .no-sessions {
+        color: #999;
+        text-align: center;
+        padding: 20px;
+        font-size: 13px;
+    }
+    
+    .loading {
+        color: #999;
+        text-align: center;
+        padding: 20px;
+        font-size: 13px;
+    }
+</style>
+{{end}}
 
 {{define "page_content"}}
-<div style="display: flex; height: 100%;">
+<div class="chat-container">
     <!-- 左侧对话列表 -->
-    <div style="width: 300px; background: #f5f5f5; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column;">
+    <div class="session-list">
         <!-- 返回按钮 -->
-        <div style="padding: 15px; border-bottom: 1px solid #e0e0e0;">
-            <a id="backLink" href="/teacher/classes" style="color: #667eea; text-decoration: none; font-size: 14px;">← 返回</a>
+        <div class="session-list-header">
+            <a id="backLink" href="/teacher/classes" class="back-button">← 返回</a>
         </div>
+        
         <!-- 学生信息 -->
-        <div style="padding: 20px; border-bottom: 1px solid #e0e0e0; background: white;">
-            <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: bold; margin: 0 auto 10px;">
+        <div class="student-info">
+            <div class="student-avatar">
                 <span id="studentAvatar">?</span>
             </div>
-            <h3 id="studentName" style="text-align: center; font-size: 16px; color: #333;">加载中...</h3>
-            <p style="text-align: center; color: #999; font-size: 12px; margin-top: 5px;">学生的答疑记录</p>
+            <h3 id="studentName" class="student-name">加载中...</h3>
+            <p class="student-subtitle">学生的答疑记录</p>
         </div>
+        
         <!-- 对话列表 -->
-        <div id="sessionList" style="flex: 1; overflow-y: auto; padding: 10px;">
-            <div style="color: #999; text-align: center; padding: 20px; font-size: 13px;">加载中...</div>
+        <div id="sessionList" class="session-list-content">
+            <div class="loading">加载中...</div>
         </div>
     </div>
     
     <!-- 右侧聊天区域 -->
-    <div style="flex: 1; display: flex; flex-direction: column;">
+    <div class="chat-area">
         <!-- 顶部当前会话信息 -->
-        <div style="padding: 12px 20px; background: white; border-bottom: 1px solid #e0e0e0;">
-            <span style="font-size: 14px; color: #666;">
-                当前会话: <span id="chatSession" style="font-weight: 500; color: #333;">请选择对话</span>
+        <div class="chat-header">
+            <span class="chat-header-text">
+                当前会话: <span id="chatSession" class="chat-header-session">请选择对话</span>
             </span>
         </div>
         
         <!-- 聊天内容区 -->
-        <div id="chatBox" style="flex: 1; overflow-y: auto; padding: 20px; background: #fafafa;">
-            <div style="text-align: center; color: #999; font-size: 13px; padding: 40px;">
-                <div style="font-size: 48px; margin-bottom: 15px;">💬</div>
+        <div id="chatBox" class="chat-box">
+            <div class="chat-welcome">
+                <div class="chat-welcome-icon">💬</div>
                 <p>点击左侧对话查看学生的答疑记录</p>
             </div>
         </div>
@@ -85,7 +278,7 @@ async function loadStudentSessions() {
             }
             if (res.status === 403) {
                 document.getElementById('sessionList').innerHTML = `
-                    <div style="color: #999; text-align: center; padding: 20px; font-size: 13px;">无权查看该学生</div>
+                    <div class="no-sessions">无权查看该学生</div>
                 `;
                 return;
             }
@@ -97,7 +290,7 @@ async function loadStudentSessions() {
         
         if (sessions.length === 0) {
             listEl.innerHTML = `
-                <div style="color: #999; text-align: center; padding: 20px; font-size: 13px;">
+                <div class="no-sessions">
                     <div style="font-size: 32px; margin-bottom: 10px;">📝</div>
                     该学生暂无答疑记录
                 </div>
@@ -107,20 +300,23 @@ async function loadStudentSessions() {
         
         listEl.innerHTML = sessions.map(s => `
             <div onclick="loadSession('${s.ID}')" 
-                 style="padding: 12px; margin-bottom: 8px; background: white; 
-                        color: #333; border-radius: 8px; cursor: pointer; 
-                        font-size: 13px; transition: all 0.2s; border: 1px solid #eee;"
-                 onmouseover="this.style.background='#f8f9fa'"
-                 onmouseout="this.style.background='white'">
-                <div style="font-weight: 500; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.Title || '未命名对话'}</div>
-                <div style="font-size: 11px; color: #999;">${new Date(s.UpdatedAt || s.updated_at).toLocaleString()}</div>
+                 class="session-item"
+                 data-session-id="${s.ID}">
+                <div class="session-title">${s.Title || '未命名对话'}</div>
+                <div class="session-time">${new Date(s.UpdatedAt || s.updated_at).toLocaleString()}</div>
             </div>
         `).join('');
+        
+        // 添加点击事件后高亮处理
+        document.querySelectorAll('.session-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
     } catch (e) {
         document.getElementById('sessionList').innerHTML = `
-            <div style="color: #999; text-align: center; padding: 20px; font-size: 13px;">
-                加载失败: ${e.message}
-            </div>
+            <div class="no-sessions">加载失败: ${e.message}</div>
         `;
     }
 }
@@ -129,7 +325,7 @@ async function loadStudentSessions() {
 async function loadSession(sessionId) {
     document.getElementById('chatSession').textContent = '加载中...';
     const chatBox = document.getElementById('chatBox');
-    chatBox.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">加载中...</div>';
+    chatBox.innerHTML = '<div class="loading">加载中...</div>';
     
     try {
         const res = await fetch('/api/history?session_id=' + sessionId, {
@@ -161,25 +357,17 @@ async function loadSession(sessionId) {
                 if ((m.Role || m.role) === 'system') return; // 跳过系统消息
                 
                 const div = document.createElement('div');
-                div.style.margin = '15px 0';
-                div.style.padding = '12px 16px';
-                div.style.borderRadius = '12px';
-                div.style.maxWidth = '80%';
-                div.style.lineHeight = '1.6';
+                div.className = 'chat-message';
                 
                 const role = m.Role || m.role;
                 const content = m.Content || m.content;
                 
                 if (role === 'user') {
-                    div.style.background = '#667eea';
-                    div.style.color = 'white';
-                    div.style.marginLeft = 'auto';
+                    div.classList.add('chat-message-user');
                     div.textContent = content;
                 } else {
-                    div.style.background = 'white';
-                    div.style.border = '1px solid #e0e0e0';
-                    div.style.marginRight = 'auto';
-                    div.className = 'markdown-body';
+                    div.classList.add('chat-message-assistant');
+                    div.className = 'chat-message chat-message-assistant markdown-body';
                     div.innerHTML = marked.parse(content);
                 }
                 chatBox.appendChild(div);
@@ -187,15 +375,27 @@ async function loadSession(sessionId) {
             
             chatBox.scrollTop = chatBox.scrollHeight;
         } else {
-            chatBox.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">暂无消息</div>';
+            chatBox.innerHTML = '<div class="chat-welcome"><div class="chat-welcome-icon">📭</div><p>暂无消息</p></div>';
             document.getElementById('chatSession').textContent = '空对话';
         }
     } catch (e) {
-        chatBox.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">加载失败: ' + e.message + '</div>';
+        chatBox.innerHTML = '<div class="no-sessions">加载失败: ' + e.message + '</div>';
     }
 }
 
 // 页面加载时获取数据
 loadStudentSessions();
+
+// 初始化 marked.js
+marked.setOptions({
+    highlight: function(code, lang) {
+        if (lang && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
+        }
+        return hljs.highlightAuto(code).value;
+    },
+    breaks: true,
+    gfm: true
+});
 </script>
 {{end}}

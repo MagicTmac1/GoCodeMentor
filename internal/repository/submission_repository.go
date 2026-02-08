@@ -29,6 +29,9 @@ func (r *submissionRepository) GetByID(id string) (*model.Submission, error) {
 func (r *submissionRepository) GetByAssignmentAndStudent(assignmentID, studentID string) (*model.Submission, error) {
 	var submission model.Submission
 	err := r.db.Where("assignment_id = ? AND student_id = ?", assignmentID, studentID).First(&submission).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
 	return &submission, err
 }
 
@@ -44,4 +47,8 @@ func (r *submissionRepository) CountByAssignmentID(assignmentID string, status s
 	}
 	err := db.Count(&count).Error
 	return count, err
+}
+
+func (r *submissionRepository) DeleteByAssignmentID(assignmentID string) error {
+	return r.db.Where("assignment_id = ?", assignmentID).Delete(&model.Submission{}).Error
 }

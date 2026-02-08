@@ -37,3 +37,7 @@ func (r *classRepository) GetByTeacherID(teacherID string) ([]model.Class, error
 	err := r.db.Where("teacher_id = ?", teacherID).Find(&classes).Error
 	return classes, err
 }
+
+func (r *classRepository) Delete(id string) error {
+	return r.db.Where("id = ?", id).Delete(&model.Class{}).Error
+}
