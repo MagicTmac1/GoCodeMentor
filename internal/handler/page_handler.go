@@ -46,9 +46,11 @@ func (h *PageHandler) AssignmentPage(c *gin.Context) {
 
 // FeedbackPage renders the feedback page.
 func (h *PageHandler) FeedbackPage(c *gin.Context) {
+	feedbackID := c.Query("id")
 	c.HTML(http.StatusOK, "feedback.html", gin.H{
 		"Title": "意见反馈",
 		"Nav":   "feedback",
+		"ID":    feedbackID,
 	})
 }
 

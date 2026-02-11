@@ -21,7 +21,6 @@ type IClassService interface {
 	GetClassesByTeacherID(teacherID string) ([]model.Class, error)
 	GetClassByCode(code string) (*model.Class, error)
 	JoinClass(studentID, code string) error
-	LeaveClass(studentID string) error
 	AddStudentToClass(studentID, classID string) error
 	RemoveStudentFromClass(studentID, classID string) error
 	DeleteClass(classID string) error
@@ -50,7 +49,12 @@ type IAssignmentService interface {
 type IFeedbackService interface {
 	Create(feedbackType, title, content, anonymousID string) (*model.Feedback, error)
 	GetAll() ([]model.Feedback, error)
+	GetByID(id uint) (*model.Feedback, error)
 	Like(id uint) error
+	UpdateStatus(id uint, status string, teacherID string) error
+	Respond(id uint, response string, teacherID string) error
+	GetStats() (map[string]interface{}, error)
+	GetFiltered(feedbackType, status, search string) ([]model.Feedback, error)
 }
 
 type ISessionService interface {

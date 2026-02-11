@@ -22,7 +22,8 @@ func (r *feedbackRepository) Create(feedback *model.Feedback) error {
 
 func (r *feedbackRepository) GetAll() ([]model.Feedback, error) {
 	var feedbacks []model.Feedback
-	err := r.db.Order("likes desc, created_at desc").Find(&feedbacks).Error
+	// 使用数据库中的实际字段名 like_count，而不是 likes
+	err := r.db.Order("like_count desc, created_at desc").Find(&feedbacks).Error
 	return feedbacks, err
 }
 

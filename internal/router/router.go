@@ -62,7 +62,7 @@ func Setup(
 		api.POST("/classes/:id/students", classHandler.AddStudentToClass)
 		api.DELETE("/classes/:id/students/:studentId", classHandler.RemoveStudentFromClass)
 		api.DELETE("/classes/:id", classHandler.DeleteClass)
-		api.GET("/classes/:id/stats", classHandler.GetClassStats) // This method needs to be created
+		api.GET("/classes/:id/stats", classHandler.GetClassStats)
 
 		// User management
 		api.GET("/users/find", userHandler.FindUser)
@@ -94,7 +94,12 @@ func Setup(
 		// Feedback
 		api.POST("/feedback", feedbackHandler.CreateFeedback)
 		api.GET("/feedback", feedbackHandler.GetAllFeedback)
+		api.GET("/feedback/:id", feedbackHandler.GetFeedbackByID)
 		api.POST("/feedback/:id/like", feedbackHandler.LikeFeedback)
+		api.PUT("/feedback/:id/status", feedbackHandler.UpdateFeedbackStatus)
+		api.POST("/feedback/:id/respond", feedbackHandler.RespondFeedback)
+		api.GET("/feedback/stats", feedbackHandler.GetFeedbackStats)
+		api.GET("/feedback/filter", feedbackHandler.GetFilteredFeedback)
 
 		// Excel templates and imports
 		api.GET("/templates/students", excelHandler.DownloadStudentTemplate)

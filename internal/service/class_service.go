@@ -76,17 +76,6 @@ func (s *ClassService) JoinClass(studentID, code string) error {
 	return s.userRepo.Update(user)
 }
 
-// LeaveClass 学生退出班级
-func (s *ClassService) LeaveClass(studentID string) error {
-	user, err := s.userRepo.GetByID(studentID)
-	if err != nil {
-		return errors.New("学生不存在")
-	}
-
-	user.ClassID = nil
-	return s.userRepo.Update(user)
-}
-
 // AddStudentToClass 教师添加学生到班级
 func (s *ClassService) AddStudentToClass(studentID, classID string) error {
 	// 验证班级存在

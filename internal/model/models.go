@@ -112,12 +112,15 @@ type AssignmentClassWithClassName struct {
 // ========== 反馈系统 ==========
 
 type Feedback struct {
-	ID          uint   `gorm:"primaryKey"`
-	Title       string `gorm:"size:200"`
-	Content     string `gorm:"type:text"`
-	AnonymousID string `gorm:"size:100"`
-	Type        string `gorm:"size:20"` // bug, feature, praise, other
-	Status      string `gorm:"size:20;default:'open'"`
-	LikeCount   int
-	CreatedAt   time.Time
+	ID               uint       `gorm:"primaryKey"`
+	Title            string     `gorm:"size:200"`
+	Content          string     `gorm:"type:text"`
+	AnonymousID      string     `gorm:"size:100"`
+	Type             string     `gorm:"size:20"` // bug, feature, praise, other
+	Status           string     `gorm:"size:20;default:'open'"`
+	LikeCount        int
+	TeacherResponse  string     `gorm:"type:text"`          // 教师回复内容
+	RespondedAt      *time.Time `gorm:"type:timestamp"`     // 回复时间
+	CreatedAt        time.Time
+	UpdatedAt        time.Time    `gorm:"autoUpdateTime"`   // 添加更新时间
 }
