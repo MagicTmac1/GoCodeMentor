@@ -52,7 +52,14 @@ func (s *ClassService) GetClassByID(id string) (*model.Class, error) {
 
 // GetClassesByTeacherID 获取教师创建的所有班级
 func (s *ClassService) GetClassesByTeacherID(teacherID string) ([]model.Class, error) {
-	return s.classRepo.GetByTeacherID(teacherID)
+	classes, err := s.classRepo.GetByTeacherID(teacherID)
+	if err != nil {
+		return nil, err
+	}
+	if classes == nil {
+		return []model.Class{}, nil
+	}
+	return classes, nil
 }
 
 // GetClassByCode 根据邀请码获取班级

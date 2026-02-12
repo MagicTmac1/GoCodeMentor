@@ -3,6 +3,7 @@ package handler
 import (
 	"GoCodeMentor/internal/service"
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -277,14 +278,19 @@ func (h *AssignmentHandler) GetStudentAssignments(c *gin.Context) {
 			} else {
 				status = "已提交"
 			}
+			var answers map[string]interface{}
+			var detailedScore map[string]interface{}
+			json.Unmarshal([]byte(submission.Answers), &answers)
+			json.Unmarshal([]byte(submission.DetailedScore), &detailedScore)
+
 			submissionInfo = gin.H{
 				"id":             submission.ID,
 				"student_name":   submission.StudentName,
-				"answers":        submission.Answers,
+				"answers":        answers,
 				"code_content":   submission.CodeContent,
 				"total_score":    submission.TotalScore,
 				"ai_feedback":    submission.AIFeedback,
-				"detailed_score": submission.DetailedScore,
+				"detailed_score": detailedScore,
 				"status":         submission.Status,
 				"created_at":     submission.CreatedAt,
 				"updated_at":     submission.UpdatedAt,
@@ -349,14 +355,19 @@ func (h *AssignmentHandler) GetMyAssignments(c *gin.Context) {
 			} else {
 				status = "已提交"
 			}
+			var answers map[string]interface{}
+			var detailedScore map[string]interface{}
+			json.Unmarshal([]byte(submission.Answers), &answers)
+			json.Unmarshal([]byte(submission.DetailedScore), &detailedScore)
+
 			submissionInfo = gin.H{
 				"id":             submission.ID,
 				"student_name":   submission.StudentName,
-				"answers":        submission.Answers,
+				"answers":        answers,
 				"code_content":   submission.CodeContent,
 				"total_score":    submission.TotalScore,
 				"ai_feedback":    submission.AIFeedback,
-				"detailed_score": submission.DetailedScore,
+				"detailed_score": detailedScore,
 				"status":         submission.Status,
 				"created_at":     submission.CreatedAt,
 				"updated_at":     submission.UpdatedAt,
@@ -383,7 +394,13 @@ func (h *AssignmentHandler) GetAssignmentSubmissionForStudent(c *gin.Context) {
 	userID := c.GetString("userID")
 	userRole := c.GetString("userRole")
 
-	if userID == "" || userRole != "teacher" {
+	if userID == "" {
+		c.JSON(401, gin.H{"error": "请先登录"})
+		return
+	}
+
+	// 权限检查：只有教师或者学生本人可以查看
+	if userRole != "teacher" && userID != studentID {
 		c.JSON(403, gin.H{"error": "无权查看"})
 		return
 	}
@@ -404,18 +421,31 @@ func (h *AssignmentHandler) GetAssignmentSubmissionForStudent(c *gin.Context) {
 			"code":      "",
 		}
 	} else {
+		// 解析 JSON 字段
+		var answers map[string]interface{}
+		var detailedScore map[string]interface{}
+		var questionScores map[string]interface{}
+		var questionFeedback map[string]interface{}
+
+		json.Unmarshal([]byte(submission.Answers), &answers)
+		json.Unmarshal([]byte(submission.DetailedScore), &detailedScore)
+		json.Unmarshal([]byte(submission.QuestionScores), &questionScores)
+		json.Unmarshal([]byte(submission.QuestionFeedback), &questionFeedback)
+
 		submissionInfo = gin.H{
-			"submitted":        true,
-			"student_name":     submission.StudentName,
-			"answers":          submission.Answers,
-			"code":             submission.CodeContent,
-			"total_score":      submission.TotalScore,
-			"ai_feedback":      submission.AIFeedback,
-			"teacher_feedback": submission.TeacherFeedback,
-			"detailed_score":   submission.DetailedScore,
-			"status":           submission.Status,
-			"created_at":       submission.CreatedAt,
-			"updated_at":       submission.UpdatedAt,
+			"submitted":         true,
+			"student_name":      submission.StudentName,
+			"answers":           answers,
+			"code":              submission.CodeContent,
+			"total_score":       submission.TotalScore,
+			"ai_feedback":       submission.AIFeedback,
+			"teacher_feedback":  submission.TeacherFeedback,
+			"detailed_score":    detailedScore,
+			"question_scores":   questionScores,
+			"question_feedback": questionFeedback,
+			"status":            submission.Status,
+			"created_at":        submission.CreatedAt,
+			"updated_at":        submission.UpdatedAt,
 		}
 	}
 

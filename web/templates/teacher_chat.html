@@ -1,0 +1,42 @@
+{{define "teacher_chat.html"}}
+{{template "chat_base" .}}
+{{end}}
+
+{{define "teacher_title"}}{{.StudentName}} 的答疑记录{{end}}
+
+{{define "teacher_sidebar_header"}}
+<a onclick="goBack()" class="back-button">返回学生列表</a>
+{{end}}
+
+{{define "teacher_sidebar_info"}}{{end}}
+
+{{define "teacher_header_extra"}}
+<div class="student-header-info" style="display: flex; align-items: center; gap: 10px;">
+    <div class="student-name" style="font-weight: 600; color: var(--text-main); font-size: 14px;">{{.StudentName}}</div>
+    <div class="student-avatar" id="headerAvatar" style="width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: bold; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);">
+        <span>{{/* Set by JS */}}</span>
+    </div>
+</div>
+{{end}}
+
+{{define "teacher_welcome_text"}}点击左侧对话查看学生的答疑记录{{end}}
+
+{{define "teacher_extra_scripts"}}
+<script>
+function goBack() {
+    if (document.referrer && document.referrer.includes(window.location.host)) {
+        window.history.back();
+    } else {
+        window.location.href = '/teacher/classes';
+    }
+}
+
+// Fix avatar text and initialize header avatar
+document.addEventListener('DOMContentLoaded', () => {
+    const avatarEl = document.querySelector('#headerAvatar span');
+    if (avatarEl && studentName) {
+        avatarEl.textContent = Array.from(studentName)[0];
+    }
+});
+</script>
+{{end}}

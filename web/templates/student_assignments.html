@@ -6,31 +6,184 @@
     <title>学生作业情况 - GoCodeMentor</title>
     <link rel="stylesheet" href="/static/css/main.css">
     <style>
-        body { background-color: #f4f7f6; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        .student-assignments-container { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+        body { background-color: #f8fafc; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1e293b; line-height: 1.5; }
+        .student-assignments-container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
         
-        /* 头部样式 */
-        .student-header { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; display: flex; align-items: center; gap: 20px; }
-        .student-avatar { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #007bff, #0056b3); color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,123,255,0.3); }
-        .student-info h2 { margin: 0; color: #2d3436; font-size: 24px; }
-        .student-info p { margin: 5px 0 0; color: #636e72; font-size: 14px; }
+        /* 整合式头部导航 */
+        .page-header { 
+            background: white; 
+            border-radius: 24px; 
+            padding: 32px; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02), 0 10px 15px -3px rgba(0,0,0,0.03); 
+            margin-bottom: 40px; 
+            border: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 背景装饰 */
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 24px; position: relative; z-index: 1; }
+        
+        .back-btn { 
+            width: 48px;
+            height: 48px;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            background: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 14px; 
+            color: #64748b; 
+            text-decoration: none; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .back-btn:hover { 
+            background: #4f46e5; 
+            color: white; 
+            border-color: #4f46e5;
+            transform: translateX(-4px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
+        }
+
+        .student-avatar { 
+            width: 80px; 
+            height: 80px; 
+            border-radius: 22px; 
+            background: linear-gradient(135deg, #4f46e5, #7c3aed); 
+            color: white; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 36px; 
+            font-weight: 800; 
+            box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.2);
+        }
+
+        .student-info h2 { margin: 0; color: #0f172a; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; }
+        .student-info p { margin: 8px 0 0; color: #64748b; font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+        .student-info p::before { content: '🏫'; font-size: 14px; }
+
+        .header-right { text-align: right; position: relative; z-index: 1; }
+        .stats-label { font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; display: block; }
+        .stats-value { font-size: 24px; color: #0f172a; font-weight: 800; }
+
+        /* 作业列表标题区域 */
+        .section-title { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            margin-bottom: 24px;
+            padding: 0 8px;
+        }
+        .section-title h3 { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; }
+        .section-title span { font-size: 14px; color: #64748b; font-weight: 500; }
 
         /* 卡片网格 */
-        .assignments-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
-        .assignment-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 5px solid #dfe6e9; transition: transform 0.2s; position: relative; }
-        .assignment-card:hover { transform: translateY(-5px); }
+        .assignments-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 28px; }
         
-        /* 状态颜色 */
-        .status-graded { border-left-color: #2ecc71; }
-        .status-submitted { border-left-color: #f1c40f; }
-        .status-unsubmitted { border-left-color: #e74c3c; }
+        .assignment-card { 
+            background: white; 
+            border-radius: 24px; 
+            padding: 32px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+            border: 1px solid #f1f5f9; 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .assignment-card:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.08); 
+            border-color: #e2e8f0;
+        }
+        
+        /* 顶部装饰条 */
+        .card-accent {
+            position: absolute;
+            top: 0;
+            left: 32px;
+            right: 32px;
+            height: 4px;
+            border-radius: 0 0 4px 4px;
+            background: #e2e8f0;
+        }
+        .status-graded .card-accent { background: #10b981; }
+        .status-submitted .card-accent { background: #f59e0b; }
+        .status-unsubmitted .card-accent { background: #ef4444; }
 
-        .assignment-card h4 { margin: 0 0 12px; color: #2d3436; font-size: 18px; line-height: 1.4; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #636e72; }
-        .score-badge { background: #f8f9fa; padding: 4px 10px; border-radius: 6px; font-weight: bold; color: #007bff; border: 1px solid #dee2e6; }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .type-tag { 
+            padding: 6px 12px; 
+            background: #f1f5f9; 
+            border-radius: 8px; 
+            font-size: 12px; 
+            font-weight: 700; 
+            color: #64748b;
+            text-transform: uppercase;
+        }
+        
+        .status-badge {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-graded .status-badge { background: #ecfdf5; color: #059669; }
+        .status-submitted .status-badge { background: #fffbeb; color: #d97706; }
+        .status-unsubmitted .status-badge { background: #fef2f2; color: #dc2626; }
 
-        .view-details-btn { background: #007bff; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 15px; font-weight: 600; transition: background 0.2s; }
-        .view-details-btn:hover { background: #0056b3; }
+        .assignment-card h4 { margin: 0; color: #0f172a; font-size: 20px; line-height: 1.4; font-weight: 700; }
+        
+        .card-footer { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #f1f5f9;
+        }
+        
+        .score-box { text-align: left; }
+        .score-label { font-size: 12px; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 2px; }
+        .score-value { font-size: 20px; font-weight: 800; color: #4f46e5; }
+
+        .view-btn { 
+            background: #4f46e5; 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 14px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .view-btn:hover { background: #4338ca; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); }
+        .view-btn svg { transition: transform 0.2s; }
+        .view-btn:hover svg { transform: translateX(3px); }
 
         /* 模态框 - 优化设计 */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
@@ -98,12 +251,12 @@
             padding: 25px; 
             border-radius: 12px; 
             margin-bottom: 30px; 
-            border-left: 6px solid #007bff; 
-            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            border-left: 6px solid #4f46e5; 
+            box-shadow: 0 3px 10px rgba(79, 70, 229, 0.05);
         }
         .assignment-info-card h4 { 
             margin: 0 0 15px; 
-            color: #2d3436; 
+            color: #0f172a; 
             font-size: 22px; 
             font-weight: 700;
             display: flex;
@@ -111,7 +264,7 @@
             gap: 10px;
         }
         .assignment-info-card .assignment-title { 
-            color: #007bff; 
+            color: #4f46e5; 
             font-size: 24px; 
             margin-bottom: 10px;
         }
@@ -143,12 +296,12 @@
             border-left: 6px solid #dc3545; 
         }
         .submission-status-submitted { 
-            background: linear-gradient(to right, #e3f2fd, #bbdefb); 
-            border-left: 6px solid #007bff; 
+            background: linear-gradient(to right, #eef2ff, #e0e7ff); 
+            border-left: 6px solid #4f46e5; 
         }
         .submission-status-graded { 
-            background: linear-gradient(to right, #e8f5e9, #c8e6c9); 
-            border-left: 6px solid #28a745; 
+            background: linear-gradient(to right, #ecfdf5, #d1fae5); 
+            border-left: 6px solid #10b981; 
         }
         .status-content h4 { 
             margin: 0 0 10px; 
@@ -174,16 +327,16 @@
             text-align: center;
         }
         .score-not-submitted { 
-            color: #dc3545; 
-            background: #f8d7da;
+            color: #ef4444; 
+            background: #fee2e2;
         }
         .score-submitted { 
-            color: #007bff; 
-            background: #e3f2fd;
+            color: #4f46e5; 
+            background: #eef2ff;
         }
         .score-graded { 
-            color: #28a745; 
-            background: #d4edda;
+            color: #10b981; 
+            background: #ecfdf5;
         }
         
         /* AI批改反馈 */
@@ -228,14 +381,31 @@
 </head>
 <body>
     <div class="student-assignments-container">
-        <div class="student-header">
-            <div class="student-avatar" id="studentAvatar">?</div>
-            <div class="student-info">
-                <h2 id="studentName">正在同步数据...</h2>
-                <p id="studentClass">正在识别班级信息...</p>
+        <header class="page-header">
+            <div class="header-left">
+                <a href="javascript:history.back()" class="back-btn" title="返回上一级">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                </a>
+                <div class="student-avatar" id="studentAvatar">?</div>
+                <div class="student-info">
+                    <h2 id="studentName">加载中...</h2>
+                    <p id="studentClass">所属班级：-</p>
+                </div>
             </div>
+            <div class="header-right">
+                <span class="stats-label">已提交作业</span>
+                <div class="stats-value" id="assignmentCount">0</div>
+            </div>
+        </header>
+
+        <div class="section-title">
+            <h3>作业记录</h3>
+            <span id="updateTime">最后更新: 刚刚</span>
         </div>
-        <div class="assignments-grid" id="assignmentsGrid"></div>
+
+        <div class="assignments-grid" id="assignmentsList">
+            <!-- 动态加载内容 -->
+        </div>
     </div>
 
             <!-- 详情模态框 -->
@@ -394,43 +564,62 @@
 
         // 渲染作业卡片
         function renderAssignments() {
-            const grid = document.getElementById('assignmentsGrid');
-            grid.innerHTML = '';
+            const assignmentsList = document.getElementById('assignmentsList');
+            assignmentsList.innerHTML = '';
             
             if (!currentAssignments || currentAssignments.length === 0) {
-                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #b2bec3;">没有找到该学生的作业记录</div>';
+                assignmentsList.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 80px 20px; background: white; border-radius: 24px; border: 2px dashed #e2e8f0;">
+                        <div style="font-size: 48px; margin-bottom: 20px;">📚</div>
+                        <div style="font-size: 18px; font-weight: 600; color: #0f172a;">暂无作业记录</div>
+                        <p style="color: #64748b; margin-top: 8px;">该学生目前还没有任何作业分配或提交记录</p>
+                    </div>
+                `;
                 return;
             }
 
             currentAssignments.forEach((item, index) => {
-                // 关键：打印每个条目到控制台，方便你查看数据结构
-                console.log(`第 ${index} 个作业条目结构:`, item);
-
-                // 字段兼容性处理：自动寻找可能的字段位置
-                const assign = item.assignment || item.Assignment || item; // 有些API直接铺平在item里
+                const assign = item.assignment || item.Assignment || item;
                 const sub = item.submission || item.Submission || {};
                 const status = (item.status || item.Status || 'unsubmitted').toLowerCase();
                 
-                // 尝试各种可能的标题 key
                 const title = assign.title || assign.Title || assign.Name || assign.name || "未命名作业";
                 const type = assign.type || assign.Type || "常规";
                 const id = assign.id || assign.ID || "";
                 
-                // 分数处理
-                const score = sub.total_score !== undefined ? sub.total_score : (sub.TotalScore !== undefined ? sub.TotalScore : '待评');
+                const score = sub.total_score !== undefined ? sub.total_score : (sub.TotalScore !== undefined ? sub.TotalScore : '未评分');
+                
+                const statusText = status === 'graded' ? '已批改' : (status === 'submitted' ? '待批改' : '未提交');
+                const statusIcon = status === 'graded' ? 
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : 
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
 
                 const card = document.createElement('div');
                 card.className = `assignment-card status-${status}`;
                 card.innerHTML = `
-                    <h4>${title}</h4>
-                    <div class="info-row">
-                        <span>类型: ${type}</span>
-                        <span class="score-badge">得分: ${score}</span>
+                    <div class="card-accent"></div>
+                    <div class="card-header">
+                        <span class="type-tag">${type}</span>
+                        <span class="status-badge">${statusIcon}${statusText}</span>
                     </div>
-                    <button class="view-details-btn" onclick="showAssignmentDetails('${id}')">查看详细批改内容</button>
+                    <h4>${title}</h4>
+                    <div class="card-footer">
+                        <div class="score-box">
+                            <span class="score-label">作业得分</span>
+                            <span class="score-value">${score}</span>
+                        </div>
+                        <button class="view-btn" onclick="showAssignmentDetails('${id}')">
+                            查看详情
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+                    </div>
                 `;
-                grid.appendChild(card);
+                assignmentsList.appendChild(card);
             });
+            
+            // 更新统计
+            document.getElementById('assignmentCount').textContent = currentAssignments.length;
+            document.getElementById('updateTime').textContent = `最后更新: ${new Date().toLocaleTimeString()}`;
         }
 
         // 获取并展示作业详情
@@ -606,16 +795,16 @@
                     let scoreClass = 'score-submitted';
                     let statusText = '📤 作业已提交';
                     let statusIcon = '📤';
-                    let statusColor = '#007bff';
-                    let bgGradient = 'linear-gradient(to right, #e3f2fd, #bbdefb)';
+                    let statusColor = '#4f46e5';
+                    let bgGradient = 'linear-gradient(to right, #eef2ff, #e0e7ff)';
                     
                     if (submission.status === 'graded') {
                         statusClass = 'submission-status-graded';
                         scoreClass = 'score-graded';
                         statusText = '✅ 作业已批改';
                         statusIcon = '✅';
-                        statusColor = '#28a745';
-                        bgGradient = 'linear-gradient(to right, #e8f5e9, #c8e6c9)';
+                        statusColor = '#10b981';
+                        bgGradient = 'linear-gradient(to right, #ecfdf5, #d1fae5)';
                     }
                     
                     html += `
@@ -631,7 +820,7 @@
                             ${submission.updated_at && submission.status === 'graded' ? `<br><strong>📝 批改时间：</strong> ${new Date(submission.updated_at).toLocaleString('zh-CN')}` : ''}
                         </p>
                     </div>
-                    <div class="score-display ${scoreClass}" style="background: ${statusColor}; color: white; font-size: 28px; font-weight: 700; box-shadow: 0 4px 12px rgba(${statusColor === '#007bff' ? '0, 123, 255' : '40, 167, 69'}, 0.3);">
+                    <div class="score-display ${scoreClass}" style="background: ${statusColor}; color: white; font-size: 28px; font-weight: 700; box-shadow: 0 4px 12px rgba(${statusColor === '#4f46e5' ? '79, 70, 229' : '16, 185, 129'}, 0.3);">
                         ${submission.total_score !== undefined ? `${submission.total_score}/100` : '待批改'}
                     </div>
                 </div>
@@ -951,9 +1140,9 @@
             const scoreDisplay = document.getElementById('scoreDisplay');
             if (scoreDisplay) {
                 scoreDisplay.textContent = value;
-                scoreDisplay.style.color = value >= 90 ? '#28a745' : 
-                                        value >= 80 ? '#007bff' : 
-                                        value >= 60 ? '#ffc107' : '#dc3545';
+                scoreDisplay.style.color = value >= 90 ? '#10b981' : 
+                                        value >= 80 ? '#4f46e5' : 
+                                        value >= 60 ? '#f59e0b' : '#ef4444';
             }
         }
 
@@ -1174,13 +1363,13 @@
                 // 根据分数百分比设置颜色
                 const percentage = (score / maxScore) * 100;
                 if (percentage >= 90) {
-                    scoreDisplay.style.color = '#28a745';
+                    scoreDisplay.style.color = '#10b981';
                 } else if (percentage >= 80) {
-                    scoreDisplay.style.color = '#007bff';
+                    scoreDisplay.style.color = '#4f46e5';
                 } else if (percentage >= 60) {
-                    scoreDisplay.style.color = '#ffc107';
+                    scoreDisplay.style.color = '#f59e0b';
                 } else {
-                    scoreDisplay.style.color = '#dc3545';
+                    scoreDisplay.style.color = '#ef4444';
                 }
             }
         }

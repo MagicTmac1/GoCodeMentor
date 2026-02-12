@@ -215,19 +215,29 @@
                 // 获取学生ID
                 const studentId = getCookie('user_id') || localStorage.getItem('user_id') || 'stu_' + Date.now();
                 
-                const res = await fetch('/api/submissions', {
+                const res = await fetch(`/api/assignments/${assignId}/submit`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-ID': studentId,
+                        'X-User-Role': 'student'
+                    },
                     body: JSON.stringify({
-                        assignment_id: assignId,
-                        student_id: studentId,
                         student_name: studentName,
                         answers: answers,
                         code: code
                     })
                 });
                 
-                const data = await res.json();
+                const text = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('JSON Parse Error. Response text:', text);
+                    throw new Error('服务器返回数据格式错误');
+                }
+                
                 if (data.error) {
                     // 检查是否是截止时间相关的错误
                     if (data.error.includes('截止') || data.error.includes('过期')) {

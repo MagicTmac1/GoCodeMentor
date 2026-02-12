@@ -1,0 +1,115 @@
+{{define "student_chat.html"}}
+{{template "chat_base" .}}
+{{end}}
+
+{{define "student_title"}}AI 智能答疑{{end}}
+
+{{define "student_sidebar_header"}}
+<a href="/" class="back-button">返回主页</a>
+<button onclick="createNewChat()" class="new-chat-btn">新对话</button>
+{{end}}
+
+{{define "student_welcome_text"}}我是你的 AI 编程助手，有什么可以帮你的吗？{{end}}
+
+{{define "student_footer"}}
+<div class="chat-input-container">
+    <div class="input-wrapper">
+        <textarea class="chat-input" id="chatInput" placeholder="输入您的问题，按 Enter 发送..." rows="1"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+{{end}}
+
+{{define "student_extra_scripts"}}
+<script>
+// Auto-resize textarea
+const chatInput = document.getElementById('chatInput');
+if (chatInput) {
+    chatInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+}
+
+function createNewChat() {
+    currentSessionId = null;
+    document.getElementById('chatBox').innerHTML = `
+        <div class="chat-welcome">
+            <div class="chat-welcome-icon">🤖</div>
+            <p>我是你的 AI 编程助手，有什么可以帮你的吗？</p>
+        </div>
+    `;
+    document.getElementById('chatSession').textContent = '新对话';
+    document.querySelectorAll('.session-item').forEach(i => i.classList.remove('active'));
+    if (chatInput) chatInput.focus();
+}
+
+async function sendMessage() {
+    const btn = document.getElementById('sendBtn');
+    const content = chatInput.value.trim();
+    if (!content) return;
+
+    chatInput.disabled = true;
+    btn.disabled = true;
+
+    appendMessage('user', content);
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+
+    // Thinking state
+    const chatBox = document.getElementById('chatBox');
+    const thinkingRow = document.createElement('div');
+    thinkingRow.className = 'message-row assistant';
+    thinkingRow.id = 'ai-thinking';
+    
+    const thinkingDiv = document.createElement('div');
+    thinkingDiv.className = 'chat-message chat-message-assistant thinking';
+    thinkingDiv.innerHTML = '<span></span><span></span><span></span>';
+    thinkingRow.appendChild(thinkingDiv);
+    
+    chatBox.appendChild(thinkingRow);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: currentSessionId, question: content })
+        });
+        
+        const loader = document.getElementById('ai-thinking');
+        if (loader) loader.remove();
+
+        if (!res.ok) throw new Error('发送失败');
+
+        const data = await res.json();
+        if (data.answer) {
+            appendMessage('assistant', data.answer);
+            if (!currentSessionId) {
+                currentSessionId = data.session_id;
+                loadSessions();
+            }
+        }
+    } catch (e) {
+        const loader = document.getElementById('ai-thinking');
+        if (loader) loader.remove();
+        appendMessage('assistant', '抱歉，我遇到了一些问题: ' + e.message);
+    } finally {
+        chatInput.disabled = false;
+        btn.disabled = false;
+        chatInput.focus();
+    }
+}
+</script>
+{{end}}

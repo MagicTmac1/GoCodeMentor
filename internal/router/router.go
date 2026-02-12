@@ -30,13 +30,14 @@ func Setup(
 	r.GET("/.well-known/appspecific/com.chrome.devtools.json", func(c *gin.Context) { c.Status(204) })
 	r.GET("/favicon.ico", func(c *gin.Context) { c.Status(204) })
 
-	// Authenticated routes
+	// Authenticated routes (Teacher & Student)
 	authorized := r.Group("/")
 	authorized.Use(authMiddleware)
 	{
 		authorized.GET("/", pageHandler.IndexPage)
 		authorized.GET("/assignments", pageHandler.AssignmentPage)
 		authorized.GET("/feedback", pageHandler.FeedbackPage)
+		authorized.GET("/student/:id/chats", pageHandler.StudentChatsPage)
 	}
 
 	// Teacher-only routes
@@ -45,7 +46,6 @@ func Setup(
 	{
 		teacherOnly.GET("/teacher/classes", pageHandler.TeacherClassesPage)
 		teacherOnly.GET("/class/:id/students", pageHandler.ClassStudentsPage)
-		teacherOnly.GET("/student/:id/chats", pageHandler.StudentChatsPage)
 	}
 
 	r.GET("/student_assignments.html", authMiddleware, teacherAuthMiddleware, pageHandler.StudentAssignmentsPage)

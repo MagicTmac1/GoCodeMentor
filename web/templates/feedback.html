@@ -110,6 +110,149 @@
     .teacher-only {
         display: none;
     }
+    /* 适配反馈列表的一行样式 */
+    .feedback-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 24px;
+        background: white;
+        border-radius: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #f1f5f9;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .feedback-row:hover {
+        transform: translateX(4px);
+        border-color: #667eea;
+        box-shadow: 0 4px 12px rgba(102,126,234,0.08);
+    }
+    .feedback-row-main {
+        flex: 1;
+        min-width: 0;
+    }
+    .feedback-row-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+        flex-wrap: wrap;
+    }
+    .feedback-title-link {
+        font-weight: 600;
+        color: #1e293b;
+        text-decoration: none;
+        font-size: 16px;
+    }
+    .feedback-label {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .feedback-label--bug { background: #fee2e2; color: #ef4444; }
+    .feedback-label--feature { background: #dcfce7; color: #22c55e; }
+    .feedback-label--praise { background: #fef9c3; color: #ca8a04; }
+    .feedback-label--suggestion { background: #e0e7ff; color: #4f46e5; }
+    .feedback-label--question { background: #f3e8ff; color: #9333ea; }
+    .feedback-label--other { background: #f1f5f9; color: #64748b; }
+
+    .feedback-status-pill {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 500;
+    }
+    .feedback-status-pill--pending { background: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; }
+    .feedback-status-pill--processing { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
+    .feedback-status-pill--resolved { background: #f0fdf4; color: #16a34a; border: 1px solid #dcfce7; }
+    .feedback-status-pill--closed { background: #f8fafc; color: #64748b; border: 1px solid #f1f5f9; }
+
+    .feedback-mine-pill {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: #fdf6ec;
+        color: #e6a23c;
+        border: 1px solid #faecd8;
+    }
+    .feedback-row-snippet {
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .feedback-row-meta {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: #94a3b8;
+    }
+    .feedback-row-actions {
+        margin-left: 20px;
+    }
+    .feedback-like-chip {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .feedback-like-chip:hover {
+        background: #f1f5f9;
+        color: #1e293b;
+    }
+    .feedback-like-chip.liked {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 24px;
+        list-style: none;
+        padding: 0;
+    }
+    .pagination li a, .pagination li span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        color: #64748b;
+        text-decoration: none;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+    .pagination li.active span {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    .pagination li a:hover {
+        border-color: #667eea;
+        color: #667eea;
+    }
+    .pagination li.disabled span {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
     .feedback-loading-spinner {
         display: inline-block;
         width: 36px;
@@ -392,7 +535,7 @@
         <div style="font-size: 14px; color: #666; margin-bottom: 8px;">已解决</div>
         <div id="resolved-feedbacks" style="font-size: 32px; font-weight: 600; color: #67c23a;">0</div>
     </div>
-    <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({search: localStorage.getItem('user_id')})">
+    <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({search: FeedbackState.user.id})">
         <div style="font-size: 14px; color: #666; margin-bottom: 8px;">我的反馈</div>
         <div id="my-feedbacks" style="font-size: 32px; font-weight: 600; color: #409eff;">0</div>
     </div>
@@ -452,7 +595,7 @@
         <textarea id="fbContent" placeholder="请详细描述你的问题或建议..." style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; height: 120px; font-size: 14px; resize: vertical;"></textarea>
     </div>
     <div style="display: flex; gap: 12px;">
-        <button onclick="FeedbackController.submitFeedback()" class="btn" style="padding: 10px 24px;">🚀 匿名发布</button>
+        <button onclick="FeedbackController.submitFeedback()" class="btn" style="padding: 10px 24px;">🚀 确认发布</button>
         <button onclick="FeedbackController.hideFeedbackForm()" class="btn btn-secondary" style="padding: 10px 24px;">取消</button>
     </div>
 </div>
@@ -497,6 +640,11 @@
             if (userId) localStorage.setItem('user_id', userId);
             if (userRole) localStorage.setItem('user_role', userRole);
             if (userName) localStorage.setItem('user_name', userName);
+        }
+        
+        // 初始化控制器
+        if (window.FeedbackController) {
+            window.FeedbackController.init();
         }
         
         // 添加新建反馈按钮点击处理

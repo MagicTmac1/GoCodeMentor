@@ -1,378 +1,597 @@
-{{template "layout" .}}
-
-{{define "head"}}{{end}}
-
-{{define "chat_content"}}
-<div style="display: flex; height: 100%;">
-    <!-- 左侧对话列表 -->
-    <div style="width: 260px; background: #f5f5f5; border-right: 1px solid #e0e0e0; display: flex; flex-direction: column;">
-        <!-- 新建对话按钮 -->
-        <div style="padding: 15px; border-bottom: 1px solid #e0e0e0;">
-            <button onclick="newChat()" style="width: 100%; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
-                <span>+</span>
-                <span>新建对话</span>
-            </button>
-        </div>
-        <!-- 对话列表 -->
-        <div id="sessionList" style="flex: 1; overflow-y: auto; padding: 10px;">
-            <div style="color: #999; text-align: center; padding: 20px; font-size: 13px;">暂无历史对话</div>
-        </div>
-    </div>
+{{define "chat_base"}}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .IsTeacher}}{{template "teacher_title" .}}{{else}}{{template "student_title" .}}{{end}} - GoCodeMentor</title>
     
-    <!-- 右侧聊天区域 -->
-    <div style="flex: 1; display: flex; flex-direction: column;">
-        <!-- 顶部当前会话信息 -->
-        <div style="padding: 12px 20px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 14px; color: #666;">
-                当前会话: <span id="chatSession" style="font-weight: 500; color: #333;">新会话</span>
-            </span>
-            <button onclick="deleteCurrentSession()" id="deleteBtn" style="display: none; padding: 6px 12px; font-size: 12px; background: #ff4d4f; color: white; border: none; border-radius: 4px; cursor: pointer;">删除</button>
-        </div>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-light: #f9fafb;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
-        <!-- 聊天内容区 -->
-        <div id="chatBox" style="flex: 1; overflow-y: auto; padding: 20px; background: #fafafa;">
-            <div style="text-align: center; color: #999; font-size: 13px; padding: 40px;">
-                <div style="font-size: 48px; margin-bottom: 15px;">🤖</div>
-                <p>AI助教已就绪，支持 Markdown 格式</p>
-                <p style="font-size: 12px; margin-top: 10px;">输入 Go 语言问题开始对话</p>
-            </div>
-        </div>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            height: 90vh;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
         
-        <!-- 输入区 -->
-        <div style="padding: 15px 20px; background: white; border-top: 1px solid #e0e0e0;">
-            <div style="display: flex; gap: 10px; max-width: 800px; margin: 0 auto;">
-                <input type="text" id="chatInput" placeholder="输入你的 Go 语言问题..." style="flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none;" onkeypress="if(event.keyCode===13) sendChat()">
-                <button onclick="sendChat()" class="btn" style="padding: 10px 24px;">发送</button>
+        /* Sidebar Styles */
+        .session-list {
+            width: 320px;
+            background: var(--bg-light);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .session-list-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .session-list-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+        
+        .session-item {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--border-color);
+        }
+        
+        .session-item:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-1px);
+        }
+        
+        .session-item.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .session-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+        
+        .session-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        
+        .session-item.active .session-time {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Chat Area Styles */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+        
+        .chat-header {
+            padding: 16px 24px;
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chat-header-text {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        
+        .chat-header-session {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-left: 8px;
+        }
+        
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Message Styles */
+        .message-row {
+            display: flex;
+            gap: 12px;
+            max-width: 85%;
+        }
+        
+        .message-row.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+        
+        .message-row.assistant {
+            align-self: flex-start;
+        }
+        
+        .chat-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .avatar-user { background: var(--primary-color); color: white; }
+        .avatar-assistant { background: white; border: 1px solid var(--border-color); color: var(--primary-color); }
+        
+        .chat-message {
+            padding: 12px 18px;
+            border-radius: 18px;
+            line-height: 1.6;
+            font-size: 15px;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+            transition: all 0.3s ease;
+        }
+        
+        .chat-message-user { 
+            background: var(--primary-color); 
+            color: white; 
+            border-bottom-right-radius: 4px; 
+        }
+        
+        .chat-message-assistant { 
+            background: white; 
+            border: 1px solid rgba(0,0,0,0.05); 
+            border-bottom-left-radius: 4px; 
+            color: var(--text-main);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+
+        /* Markdown Body Styling */
+        .markdown-body { 
+            font-size: 15px; 
+            line-height: 1.7; 
+            word-wrap: break-word;
+        }
+
+        .markdown-body p { margin-bottom: 12px; }
+        .markdown-body p:last-child { margin-bottom: 0; }
+        
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+            margin-top: 20px;
+            margin-bottom: 12px;
+            font-weight: 700;
+            line-height: 1.25;
+            color: var(--text-main);
+        }
+        
+        .markdown-body h1 { font-size: 1.5em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+        .markdown-body h2 { font-size: 1.25em; border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+        .markdown-body h3 { font-size: 1.1em; }
+
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 2em;
+            margin-bottom: 12px;
+        }
+        
+        .markdown-body li { margin-bottom: 4px; }
+        
+        .markdown-body blockquote {
+            padding: 0 1em;
+            color: var(--text-muted);
+            border-left: 0.25em solid var(--border-color);
+            margin: 0 0 12px 0;
+        }
+
+        .markdown-body pre { 
+            background-color: #1e1e1e; /* Dark theme for code blocks */
+            border-radius: 10px; 
+            padding: 16px; 
+            overflow: auto; 
+            margin: 15px 0;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .code-copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+        }
+
+        .markdown-body pre:hover .code-copy-btn { opacity: 1; }
+        .code-copy-btn:hover { background: rgba(255,255,255,0.2); color: white; }
+        
+        .markdown-body pre code { 
+            background: none !important; 
+            padding: 0 !important;
+            font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 13.5px;
+            line-height: 1.5;
+            color: #d4d4d4; /* Light gray text for dark background */
+        }
+        
+        .markdown-body :not(pre) > code { 
+            font-family: SFMono-Regular, Consolas, monospace; 
+            font-size: 85%; 
+            background: rgba(79, 70, 229, 0.08); 
+            color: var(--primary-color);
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: 500;
+        }
+
+        .markdown-body table {
+            border-spacing: 0;
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        
+        .markdown-body table th, .markdown-body table td {
+            padding: 8px 13px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .markdown-body table tr:nth-child(2n) { background-color: var(--bg-light); }
+
+        /* Thinking animation */
+        .thinking span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background-color: #999;
+            border-radius: 50%;
+            margin-right: 4px;
+            animation: thinking 1.4s infinite ease-in-out both;
+        }
+        .thinking span:nth-child(1) { animation-delay: -0.32s; }
+        .thinking span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes thinking {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        /* Input Area Styles */
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            background: #f3f4f6;
+            padding: 8px 16px;
+            border-radius: 24px;
+            align-items: flex-end;
+        }
+        
+        .chat-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 8px 0;
+            font-size: 15px;
+            max-height: 120px;
+            outline: none;
+            resize: none;
+        }
+        
+        .send-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .send-btn:hover { background: var(--primary-hover); transform: scale(1.05); }
+        .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* Buttons & Utils */
+        .back-button {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: white;
+        }
+        .back-button:hover {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            background: rgba(79, 70, 229, 0.05);
+        }
+
+        .new-chat-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .chat-welcome {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            text-align: center;
+        }
+        .chat-welcome-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+
+        .loading, .no-sessions { color: var(--text-muted); text-align: center; padding: 40px 20px; }
+    </style>
+    
+    <script src="https://unpkg.com/marked@12.0.0/marked.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/languages/go.min.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Sidebar -->
+        <div class="session-list">
+            <div class="session-list-header">
+                {{if .IsTeacher}}{{template "teacher_sidebar_header" .}}{{else}}{{template "student_sidebar_header" .}}{{end}}
             </div>
-        </div>
-    </div>
-</div>
-{{end}}
-
-{{define "chat_scripts"}}
-<script>
-marked.setOptions({
-    highlight: function(code, lang) {
-        if (lang && hljs.getLanguage(lang)) {
-            return hljs.highlight(code, { language: lang }).value;
-        }
-        return hljs.highlightAuto(code).value;
-    },
-    breaks: true,
-    gfm: true
-});
-
-let chatSessionId = localStorage.getItem('chat_session_id') || '';
-let sessions = JSON.parse(localStorage.getItem('chat_sessions') || '[]');
-
-// 初始化 - 从服务器加载所有历史会话
-(async function init() {
-    await loadSessionsFromServer();
-})();
-
-// 获取用户信息（从Cookie或localStorage）
-function getUserInfo() {
-    const userId = localStorage.getItem('user_id') || '';
-    const userRole = localStorage.getItem('user_role') || '';
-    return { userId, userRole };
-}
-
-// 从服务器加载会话列表
-async function loadSessionsFromServer() {
-    // 先显示加载中
-    document.getElementById('sessionList').innerHTML = '<div style="color: #999; text-align: center; padding: 20px; font-size: 13px;">加载中...</div>';
-    
-    const { userId, userRole } = getUserInfo();
-    
-    try {
-        const res = await fetch('/api/sessions', {
-            headers: {
-                'X-User-ID': userId,
-                'X-User-Role': userRole
-            }
-        });
-        if (res.ok) {
-            const data = await res.json();
-            if (data && data.length > 0) {
-                // 转换服务器会话格式到本地格式
-                sessions = [];
-                for (const s of data) {
-                    const sessionId = s.ID || s.id;
-                    // 获取第一条用户消息作为标题
-                    let title = '新对话';
-                    try {
-                        const msgRes = await fetch('/api/history?session_id=' + sessionId);
-                        if (msgRes.ok) {
-                            const messages = await msgRes.json();
-                            const firstUserMsg = messages.find(m => m.Role === 'user' || m.role === 'user');
-                            if (firstUserMsg) {
-                                const content = firstUserMsg.Content || firstUserMsg.content;
-                                title = content.slice(0, 20) + (content.length > 20 ? '...' : '');
-                            }
-                        }
-                    } catch (e) {
-                        console.log('获取会话消息失败:', e);
-                    }
-                    
-                    sessions.push({
-                        id: sessionId,
-                        title: title,
-                        time: new Date(s.CreatedAt || s.created_at).getTime(),
-                        messages: [] // 延迟加载完整消息
-                    });
-                }
-                localStorage.setItem('chat_sessions', JSON.stringify(sessions));
-            } else {
-                sessions = [];
-            }
-        }
-    } catch (e) {
-        console.log('从服务器加载会话失败:', e);
-        // 失败时尝试从本地存储恢复
-        const cached = localStorage.getItem('chat_sessions');
-        if (cached) {
-            sessions = JSON.parse(cached);
-        }
-    }
-    
-    // 渲染列表
-    loadSessionList();
-    
-    // 如果有当前会话ID，自动加载该会话
-    if (chatSessionId) {
-        const session = sessions.find(s => s.id === chatSessionId);
-        if (session) {
-            await loadSessionFromServer(chatSessionId);
-        }
-    }
-}
-
-// 加载对话列表（本地渲染）
-function loadSessionList() {
-    const listEl = document.getElementById('sessionList');
-    if (sessions.length === 0) {
-        listEl.innerHTML = '<div style="color: #999; text-align: center; padding: 20px; font-size: 13px;">暂无历史对话</div>';
-        return;
-    }
-    
-    // 按时间倒序
-    sessions.sort((a, b) => b.time - a.time);
-    
-    listEl.innerHTML = sessions.map(s => `
-        <div onclick="switchSession('${s.id}')" 
-             style="padding: 12px; margin-bottom: 8px; background: ${s.id === chatSessionId ? '#667eea' : 'white'}; 
-                    color: ${s.id === chatSessionId ? 'white' : '#333'}; border-radius: 8px; cursor: pointer; 
-                    font-size: 13px; transition: all 0.2s; border: 1px solid ${s.id === chatSessionId ? '#667eea' : '#eee'};"
-             onmouseover="this.style.background='${s.id === chatSessionId ? '#5a6fd6' : '#f8f9fa'}'"
-             onmouseout="this.style.background='${s.id === chatSessionId ? '#667eea' : 'white'}'">
-            <div style="font-weight: 500; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.title}</div>
-            <div style="font-size: 11px; opacity: 0.7;">${new Date(s.time).toLocaleString()}</div>
-        </div>
-    `).join('');
-}
-
-// 新建对话
-function newChat() {
-    chatSessionId = '';
-    localStorage.removeItem('chat_session_id');
-    document.getElementById('chatBox').innerHTML = `
-        <div style="text-align: center; color: #999; font-size: 13px; padding: 40px;">
-            <div style="font-size: 48px; margin-bottom: 15px;">🤖</div>
-            <p>AI助教已就绪，支持 Markdown 格式</p>
-            <p style="font-size: 12px; margin-top: 10px;">输入 Go 语言问题开始对话</p>
-        </div>
-    `;
-    document.getElementById('chatSession').textContent = '新会话';
-    document.getElementById('deleteBtn').style.display = 'none';
-    loadSessionList();
-}
-
-// 切换对话
-async function switchSession(id) {
-    chatSessionId = id;
-    localStorage.setItem('chat_session_id', id);
-    await loadSessionFromServer(id);
-    loadSessionList();
-}
-
-// 从服务器加载指定对话
-async function loadSessionFromServer(id) {
-    const session = sessions.find(s => s.id === id);
-    if (!session) return;
-    
-    // 更新UI显示当前会话
-    chatSessionId = id;
-    localStorage.setItem('chat_session_id', id);
-    document.getElementById('chatSession').textContent = session.title;
-    document.getElementById('deleteBtn').style.display = 'inline-block';
-    
-    // 更新列表选中状态
-    loadSessionList();
-    
-    const chatBox = document.getElementById('chatBox');
-    chatBox.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">加载中...</div>';
-    
-    try {
-        // 从服务器获取消息历史
-        const res = await fetch('/api/history?session_id=' + id);
-        if (res.ok) {
-            const messages = await res.json();
-            chatBox.innerHTML = '';
             
-            if (messages && messages.length > 0) {
-                // 转换服务器消息格式并显示
-                session.messages = messages.map(m => ({
-                    role: m.Role || m.role,
-                    content: m.Content || m.content,
-                    isHTML: (m.Role || m.role) === 'assistant'
-                }));
-                
-                session.messages.forEach(msg => {
-                    appendMessage(msg.role, msg.content, msg.isHTML, false);
-                });
+            {{if .IsTeacher}}{{template "teacher_sidebar_info" .}}{{else}}{{template "student_sidebar_info" .}}{{end}}
+            
+            <div id="sessionList" class="session-list-content">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <!-- Main Chat Area -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <span class="chat-header-text">
+                    当前会话: <span id="chatSession" class="chat-header-session">请选择对话</span>
+                </span>
+                {{if .IsTeacher}}{{template "teacher_header_extra" .}}{{else}}{{template "student_header_extra" .}}{{end}}
+            </div>
+            
+            <div id="chatBox" class="chat-box">
+                <div class="chat-welcome">
+                    <div class="chat-welcome-icon">💬</div>
+                    <p id="welcomeText">{{if .IsTeacher}}{{template "teacher_welcome_text" .}}{{else}}{{template "student_welcome_text" .}}{{end}}</p>
+                </div>
+            </div>
+
+            {{if .IsTeacher}}{{template "teacher_footer" .}}{{else}}{{template "student_footer" .}}{{end}}
+        </div>
+    </div>
+
+    <script>
+        // Common State & Constants
+        const userId = localStorage.getItem('user_id');
+        const userRole = localStorage.getItem('user_role');
+        const isTeacher = userRole === 'teacher';
+        
+        // Context Data (Provided by specific templates)
+        const studentId = '{{.StudentID}}'; 
+        const studentName = '{{.StudentName}}';
+
+        let currentSessionId = null;
+
+        // Initialization logic
+        if (!userId) { window.location.href = '/login'; }
+
+        // Common Functions
+        function appendMessage(role, content, scroll = true) {
+            const chatBox = document.getElementById('chatBox');
+            const welcome = chatBox.querySelector('.chat-welcome');
+            if (welcome) welcome.remove();
+
+            const row = document.createElement('div');
+            row.className = `message-row ${role}`;
+            
+            // Only show avatars in teacher mode OR for assistant in student mode if desired
+            // But following previous rule: only teacher view shows avatars
+            if (isTeacher) {
+                const avatar = document.createElement('div');
+                avatar.className = `chat-avatar avatar-${role}`;
+                avatar.textContent = role === 'user' ? (Array.from(studentName)[0] || '学') : '🤖';
+                row.appendChild(avatar);
+            }
+
+            const div = document.createElement('div');
+            div.className = `chat-message chat-message-${role}`;
+            
+            if (role === 'user') {
+                div.textContent = content;
             } else {
-                chatBox.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">暂无消息</div>';
+                div.classList.add('markdown-body');
+                div.innerHTML = marked.parse(content);
+                
+                // Enhanced code blocks with copy button
+                div.querySelectorAll('pre').forEach(pre => {
+                    const code = pre.querySelector('code');
+                    if (code) {
+                        hljs.highlightElement(code);
+                        
+                        const copyBtn = document.createElement('button');
+                        copyBtn.className = 'code-copy-btn';
+                        copyBtn.textContent = '复制';
+                        copyBtn.onclick = () => {
+                            navigator.clipboard.writeText(code.textContent);
+                            copyBtn.textContent = '已复制!';
+                            setTimeout(() => copyBtn.textContent = '复制', 2000);
+                        };
+                        pre.appendChild(copyBtn);
+                    }
+                });
             }
-        } else {
-            chatBox.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">加载失败</div>';
+            
+            row.appendChild(div);
+            chatBox.appendChild(row);
+            if (scroll) { chatBox.scrollTop = chatBox.scrollHeight; }
         }
-    } catch (e) {
-        chatBox.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">加载失败: ' + e.message + '</div>';
-    }
-}
 
-// 兼容旧方法
-function loadSession(id) {
-    loadSessionFromServer(id);
-}
+        async function selectSession(sessionId) {
+            currentSessionId = sessionId;
+            document.querySelectorAll('.session-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.sessionId === sessionId);
+            });
 
-// 删除当前对话
-function deleteCurrentSession() {
-    if (!chatSessionId) return;
-    if (!confirm('确定要删除当前对话吗？')) return;
-    
-    sessions = sessions.filter(s => s.id !== chatSessionId);
-    localStorage.setItem('chat_sessions', JSON.stringify(sessions));
-    newChat();
-}
-
-// 保存消息到会话
-function saveMessage(role, content, isHTML = false) {
-    if (!chatSessionId) return;
-    
-    let session = sessions.find(s => s.id === chatSessionId);
-    const isNewSession = !session;
-    
-    if (isNewSession) {
-        // 创建新会话，使用第一条用户消息作为标题
-        const title = role === 'user' 
-            ? content.slice(0, 20) + (content.length > 20 ? '...' : '')
-            : '新对话';
-        session = {
-            id: chatSessionId,
-            title: title,
-            time: Date.now(),
-            messages: []
-        };
-        sessions.push(session);
-    }
-    
-    session.messages.push({ role, content, isHTML });
-    session.time = Date.now();
-    
-    // 更新标题（如果是第一条用户消息）
-    if (isNewSession && role === 'assistant' && session.messages.find(m => m.role === 'user')) {
-        const firstUserMsg = session.messages.find(m => m.role === 'user');
-        session.title = firstUserMsg.content.slice(0, 20) + (firstUserMsg.content.length > 20 ? '...' : '');
-    }
-    
-    localStorage.setItem('chat_sessions', JSON.stringify(sessions));
-    loadSessionList();
-}
-
-function appendMessage(role, content, isHTML = false, save = true) {
-    const box = document.getElementById('chatBox');
-    const div = document.createElement('div');
-    div.style.margin = '15px 0';
-    div.style.padding = '12px 16px';
-    div.style.borderRadius = '12px';
-    div.style.maxWidth = '80%';
-    div.style.lineHeight = '1.6';
-    
-    if (role === 'user') {
-        div.style.background = '#667eea';
-        div.style.color = 'white';
-        div.style.marginLeft = 'auto';
-        div.textContent = content;
-    } else {
-        div.style.background = 'white';
-        div.style.border = '1px solid #e0e0e0';
-        div.style.marginRight = 'auto';
-        div.className = 'markdown-body';
-        if (isHTML) {
-            div.innerHTML = marked.parse(content);
-            div.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-        } else {
-            div.textContent = content;
-        }
-    }
-    box.appendChild(div);
-    box.scrollTop = box.scrollHeight;
-    
-    if (save) {
-        saveMessage(role, content, isHTML);
-    }
-}
-
-async function sendChat() {
-    const input = document.getElementById('chatInput');
-    const q = input.value.trim();
-    if (!q) return;
-    
-    // 如果是新会话，生成ID
-    if (!chatSessionId) {
-        chatSessionId = 'session_' + Date.now();
-        localStorage.setItem('chat_session_id', chatSessionId);
-        document.getElementById('deleteBtn').style.display = 'inline-block';
-    }
-    
-    appendMessage('user', q);
-    input.value = '';
-    
-    const { userId, userRole } = getUserInfo();
-    
-    try {
-        const res = await fetch('/api/chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-User-ID': userId,
-                'X-User-Role': userRole
-            },
-            body: JSON.stringify({session_id: chatSessionId, question: q})
-        });
-        const data = await res.json();
-        if (data.error) {
-            appendMessage('bot', '错误：' + data.error);
-        } else {
-            appendMessage('bot', data.answer, true);
-            // 如果是新会话，更新ID并刷新列表
-            if (data.session_id !== chatSessionId) {
-                chatSessionId = data.session_id;
-                localStorage.setItem('chat_session_id', chatSessionId);
-                // 更新当前会话的ID（因为服务器可能返回了新的）
-                const session = sessions[sessions.length - 1];
-                if (session) {
-                    session.id = chatSessionId;
-                    localStorage.setItem('chat_sessions', JSON.stringify(sessions));
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML = '<div class="loading">加载中...</div>';
+            
+            try {
+                const res = await fetch('/api/history?session_id=' + sessionId);
+                if (!res.ok) throw new Error('加载失败');
+                
+                const messages = await res.json();
+                chatBox.innerHTML = '';
+                
+                if (messages && messages.length > 0) {
+                    const firstUserMsg = messages.find(m => (m.Role || m.role) === 'user');
+                    document.getElementById('chatSession').textContent = firstUserMsg ? 
+                        (firstUserMsg.Content || firstUserMsg.content).slice(0, 30) + '...' : '对话记录';
+                    
+                    messages.forEach(m => {
+                        const role = m.Role || m.role;
+                        if (role === 'system') return;
+                        appendMessage(role === 'user' ? 'user' : 'assistant', m.Content || m.content, false);
+                    });
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                } else {
+                    chatBox.innerHTML = '<div class="no-sessions">该对话暂无消息</div>';
                 }
+            } catch (e) {
+                chatBox.innerHTML = '<div class="no-sessions">加载失败: ' + e.message + '</div>';
             }
-            document.getElementById('chatSession').textContent = sessions.find(s => s.id === chatSessionId)?.title || '新会话';
-            loadSessionList();
         }
-    } catch (e) {
-        appendMessage('bot', '网络错误：' + e.message);
-    }
-}
-</script>
+
+        async function loadSessions() {
+            try {
+                // API path depends on role
+                const url = isTeacher ? `/api/students/${studentId}/sessions` : '/api/sessions';
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('加载失败');
+                
+                const sessions = await res.json();
+                const listEl = document.getElementById('sessionList');
+                
+                if (sessions.length === 0) {
+                    listEl.innerHTML = '<div class="no-sessions">暂无记录</div>';
+                    return;
+                }
+                
+                listEl.innerHTML = sessions.map(s => `
+                    <div onclick="selectSession('${s.ID}')" 
+                         class="session-item ${currentSessionId === s.ID ? 'active' : ''}"
+                         data-session-id="${s.ID}">
+                        <div class="session-title">${s.Title || '新对话'}</div>
+                        <div class="session-time">${new Date(s.UpdatedAt || s.updated_at).toLocaleString()}</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('sessionList').innerHTML = `<div class="no-sessions">${e.message}</div>`;
+            }
+        }
+
+        // Initialize session list
+        loadSessions();
+    </script>
+
+    {{if .IsTeacher}}{{template "teacher_extra_scripts" .}}{{else}}{{template "student_extra_scripts" .}}{{end}}
+</body>
+</html>
 {{end}}
+
+{{/* Default empty definitions to avoid panics */}}
+{{define "teacher_title"}}AI 智能答疑{{end}}
+{{define "student_title"}}AI 智能答疑{{end}}
+{{define "teacher_sidebar_header"}}{{end}}
+{{define "student_sidebar_header"}}{{end}}
+{{define "teacher_sidebar_info"}}{{end}}
+{{define "student_sidebar_info"}}{{end}}
+{{define "teacher_welcome_text"}}请选择左侧对话开始{{end}}
+{{define "student_welcome_text"}}请选择左侧对话开始{{end}}
+{{define "teacher_footer"}}{{end}}
+{{define "student_footer"}}{{end}}
+{{define "teacher_header_extra"}}{{end}}
+{{define "student_header_extra"}}{{end}}
+{{define "teacher_extra_scripts"}}{{end}}
+{{define "student_extra_scripts"}}{{end}}

@@ -121,9 +121,7 @@
     </div>
 
     <div class="container">
-        {{if eq .Nav "chat"}}
-            {{template "chat_content" .}}
-        {{else if eq .Nav "assignment"}}
+        {{if eq .Nav "assignment"}}
             {{template "assignment_content" .}}
         {{else if eq .Nav "feedback"}}
             {{template "feedback_content" .}}
@@ -132,9 +130,7 @@
         {{end}}
     </div>
 
-    {{if eq .Nav "chat"}}
-        {{template "chat_scripts" .}}
-    {{else if eq .Nav "assignment"}}
+    {{if eq .Nav "assignment"}}
         {{template "assignment_scripts" .}}
     {{else if eq .Nav "feedback"}}
         {{template "feedback_scripts" .}}

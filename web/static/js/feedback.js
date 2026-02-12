@@ -200,7 +200,6 @@ const FeedbackUI = {
                         <span class="feedback-status-pill feedback-status-pill--${feedback.Status || 'pending'}">${statusLabel}</span>
                         ${isMyFeedback ? '<span class="feedback-mine-pill">我的反馈</span>' : ''}
                     </div>
-                    ${snippet ? `<div class="feedback-row-snippet">${snippet}</div>` : ''}
                     <div class="feedback-row-meta">
                         <span>${feedback.AnonymousID || '匿名用户'}</span>
                         <span>${dateStr}</span>
@@ -360,27 +359,34 @@ const FeedbackUI = {
                 ` : ''}
                 
                 <!-- 操作按钮区域 -->
-                <div style="display: flex; gap: 12px; flex-wrap: wrap; border-top: 1px solid #eee; padding-top: 25px; margin-top: 10px;">
-                    <!-- 通用：点赞按钮 -->
-                    <button id="modalLikeBtn" class="feedback-like-btn ${feedback.Liked ? 'liked' : ''}" style="margin-right: auto;">
-                        <i class="icon-heart"></i> 点赞 (${feedback.LikeCount || 0})
-                    </button>
-                    
-                    <!-- 教师特有按钮 -->
+                <div style="border-top: 1px solid #eee; padding-top: 25px; margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <button id="modalLikeBtn" class="feedback-like-btn ${feedback.Liked ? 'liked' : ''}">
+                            👍 点赞 (${feedback.LikeCount || 0})
+                        </button>
+                        <button id="modalCloseBtn" class="btn btn-secondary" style="padding: 8px 20px;">关闭</button>
+                    </div>
+
                     ${isTeacher ? `
-                        <button id="modalStatusPendingBtn" class="feedback-status-btn" ${feedback.Status === 'pending' ? 'disabled' : ''}>⏳ 标记待处理</button>
-                        <button id="modalStatusProcessingBtn" class="feedback-status-btn" ${feedback.Status === 'processing' ? 'disabled' : ''}>🔄 标记处理中</button>
-                        <button id="modalStatusResolvedBtn" class="feedback-status-btn" ${feedback.Status === 'resolved' ? 'disabled' : ''}>✅ 标记已解决</button>
-                        <button id="modalStatusClosedBtn" class="feedback-status-btn" ${feedback.Status === 'closed' ? 'disabled' : ''}>🔒 标记已关闭</button>
-                        <button id="modalDeleteBtn" class="btn btn-danger">🗑️ 删除反馈</button>
+                    <div style="background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0;">
+                        <h4 style="margin: 0 0 15px 0; font-size: 14px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">🛠️ 管理操作</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                            <button id="modalStatusPendingBtn" class="feedback-status-btn ${feedback.Status === 'pending' ? 'active' : ''}" ${feedback.Status === 'pending' ? 'disabled' : ''}>⏳ 待处理</button>
+                            <button id="modalStatusProcessingBtn" class="feedback-status-btn ${feedback.Status === 'processing' ? 'active' : ''}" ${feedback.Status === 'processing' ? 'disabled' : ''}>🔄 处理中</button>
+                            <button id="modalStatusResolvedBtn" class="feedback-status-btn ${feedback.Status === 'resolved' ? 'active' : ''}" ${feedback.Status === 'resolved' ? 'disabled' : ''}>✅ 已解决</button>
+                            <button id="modalStatusClosedBtn" class="feedback-status-btn ${feedback.Status === 'closed' ? 'active' : ''}" ${feedback.Status === 'closed' ? 'disabled' : ''}>🔒 已关闭</button>
+                        </div>
+                        <div style="border-top: 1px solid #e2e8f0; padding-top: 15px; display: flex; justify-content: flex-end;">
+                            <button id="modalDeleteBtn" class="btn btn-danger" style="padding: 8px 16px; font-size: 13px;">🗑️ 删除反馈</button>
+                        </div>
+                    </div>
                     ` : ''}
                     
-                    <!-- 非教师（学生/匿名）且是自己的反馈：可删除（或取消点赞已在通用按钮） -->
                     ${!isTeacher && isMyFeedback ? `
-                        <button id="modalDeleteBtn" class="btn btn-danger">🗑️ 删除我的反馈</button>
+                    <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
+                        <button id="modalDeleteBtn" class="btn btn-danger" style="padding: 8px 16px; font-size: 13px;">🗑️ 删除我的反馈</button>
+                    </div>
                     ` : ''}
-                    
-                    <button id="modalCloseBtn" class="btn btn-secondary" style="margin-left: auto;">关闭</button>
                 </div>
             </div>
         `;
@@ -470,11 +476,12 @@ const FeedbackUI = {
         const deleteBtn = document.getElementById('modalDeleteBtn');
         if (deleteBtn) {
             deleteBtn.onclick = async () => {
-                if (!confirm('确定要删除这条反馈吗？')) return;
+                if (!confirm('确定要删除这条反馈吗？此操作不可撤销。')) return;
                 try {
                     await FeedbackController.deleteFeedback(feedback.ID);
                     FeedbackUI.showNotification('删除成功', 'success');
                     closeModal();
+                    // 刷新列表
                     FeedbackController.loadFeedbacks();
                 } catch (error) {
                     FeedbackUI.showNotification('删除失败', 'error');

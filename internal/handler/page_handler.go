@@ -43,10 +43,19 @@ func (h *PageHandler) AssignmentPage(c *gin.Context) {
 // FeedbackPage renders the feedback page.
 func (h *PageHandler) FeedbackPage(c *gin.Context) {
 	feedbackID := c.Query("id")
+	userRole := c.GetString("userRole")
+	userID := c.GetString("userID")
+	userName := c.GetString("userName")
+
 	c.HTML(http.StatusOK, "feedback.html", gin.H{
 		"Title": "意见反馈",
 		"Nav":   "feedback",
 		"ID":    feedbackID,
+		"User": gin.H{
+			"ID":   userID,
+			"Role": userRole,
+			"Name": userName,
+		},
 	})
 }
 
@@ -62,10 +71,30 @@ func (h *PageHandler) ClassStudentsPage(c *gin.Context) {
 
 // StudentChatsPage renders the student chats page.
 func (h *PageHandler) StudentChatsPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "student_chats.html", gin.H{
-		"Title": "学生答疑记录",
-		"Nav":   "",
-	})
+	requestedID := c.Param("id")
+	userRole := c.GetString("userRole")
+	userID := c.GetString("userID")
+	studentName := c.Query("name")
+
+	// 如果是学生，只能看自己的聊天记录
+	if userRole == "student" && requestedID != userID {
+		c.Redirect(http.StatusFound, "/")
+		return
+	}
+
+	if userRole == "teacher" {
+		c.HTML(http.StatusOK, "teacher_chat.html", gin.H{
+			"StudentID":   requestedID,
+			"StudentName": studentName,
+			"IsTeacher":   true,
+		})
+	} else {
+		c.HTML(http.StatusOK, "student_chat.html", gin.H{
+			"StudentID":   userID,
+			"StudentName": studentName,
+			"IsTeacher":   false,
+		})
+	}
 }
 
 // StudentAssignmentsPage renders the student assignments page.
