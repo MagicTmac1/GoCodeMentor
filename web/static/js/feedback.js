@@ -188,10 +188,12 @@ const FeedbackUI = {
 
         // 使用更接近 GitHub Issues 的一行样式
         return `
-            <div class="feedback-card feedback-row ${feedback.Status || 'pending'}" data-id="${feedback.ID}">
+            <div class="feedback-card feedback-row ${feedback.Status || 'pending'}" 
+                 data-id="${feedback.ID}"
+                 onclick="FeedbackController.viewFeedbackDetail(${feedback.ID})">
                 <div class="feedback-row-main">
                     <div class="feedback-row-title">
-                        <a href="javascript:void(0)" onclick="FeedbackController.viewFeedbackDetail(${feedback.ID})" class="feedback-title-link">
+                        <a href="javascript:void(0)" class="feedback-title-link">
                             ${feedback.Title || '无标题'}
                         </a>
                         <span class="feedback-label feedback-label--${feedback.Type || 'other'}">${typeLabel}</span>
@@ -206,7 +208,9 @@ const FeedbackUI = {
                     </div>
                 </div>
                 <div class="feedback-row-actions">
-                    <button class="feedback-like-chip ${likeClass}" onclick="FeedbackController.toggleLike(${feedback.ID})" title="点赞">
+                    <button class="feedback-like-chip ${likeClass}" 
+                            onclick="event.stopPropagation(); FeedbackController.toggleLike(${feedback.ID})" 
+                            title="点赞">
                         👍 ${feedback.LikeCount || 0}
                     </button>
                 </div>
@@ -315,8 +319,8 @@ const FeedbackUI = {
             }
         };
         
-        const isTeacher = FeedbackState.user.role === 'teacher';
-        const isMyFeedback = feedback.AnonymousID === FeedbackState.user.id;
+        const isTeacher = FeedbackState.user.role === 'teacher' || localStorage.getItem('user_role') === 'teacher';
+        const isMyFeedback = feedback.AnonymousID === FeedbackState.user.id || feedback.AnonymousID === localStorage.getItem('user_id');
         
         // 构建模态框内容
         contentDiv.innerHTML = `
@@ -335,7 +339,7 @@ const FeedbackUI = {
                     </div>
                 </div>
                 
-                <!-- 教师回复区域 -->
+                <!-- 教师回复展示区域 -->
                 ${feedback.TeacherResponse ? `
                 <div style="background: #fef7e7; border-radius: 12px; padding: 20px; margin-bottom: 25px; border-left: 4px solid #e6a23c;">
                     <div style="display: flex; align-items: center; margin-bottom: 12px;">
@@ -344,13 +348,16 @@ const FeedbackUI = {
                     </div>
                     <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;">${feedback.TeacherResponse}</p>
                 </div>
-                ` : (isTeacher ? `
-                <div style="margin-bottom: 25px;">
-                    <label style="display: block; margin-bottom: 8px; color: #555; font-size: 14px; font-weight: 500;">📝 教师回复</label>
-                    <textarea id="teacherResponseInput" placeholder="输入回复内容..." style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; height: 100px; resize: vertical;">${feedback.TeacherResponse || ''}</textarea>
-                    <button id="submitResponseBtn" class="btn" style="margin-top: 12px; padding: 8px 20px; background: #e6a23c; border: none;">发布回复</button>
+                ` : ''}
+
+                <!-- 教师回复输入区域（仅教师可见） -->
+                ${isTeacher ? `
+                <div style="margin-bottom: 25px; padding: 20px; background: #f0f9eb; border-radius: 12px; border: 1px dashed #67c23a;">
+                    <label style="display: block; margin-bottom: 8px; color: #555; font-size: 14px; font-weight: 600;">📝 ${feedback.TeacherResponse ? '修改回复' : '发布回复'}</label>
+                    <textarea id="teacherResponseInput" placeholder="输入您的回复内容..." style="width: 100%; padding: 12px; border: 1px solid #dcdfe6; border-radius: 8px; font-size: 14px; height: 100px; resize: vertical; margin-bottom: 10px;">${feedback.TeacherResponse || ''}</textarea>
+                    <button id="submitResponseBtn" class="btn" style="padding: 8px 20px; background: #67c23a; border: none; color: white; font-weight: 500;">${feedback.TeacherResponse ? '更新回复' : '提交回复'}</button>
                 </div>
-                ` : '')}
+                ` : ''}
                 
                 <!-- 操作按钮区域 -->
                 <div style="display: flex; gap: 12px; flex-wrap: wrap; border-top: 1px solid #eee; padding-top: 25px; margin-top: 10px;">
@@ -496,13 +503,25 @@ const FeedbackUI = {
 
     // 辅助方法
     getTypeLabel(type) {
-        const map = { 'bug': '故障', 'suggestion': '建议', 'question': '疑问', 'other': '其他' };
-        return map[type] || type || '其他';
+        const map = { 
+            'bug': '🐛 Bug报告', 
+            'feature': '✨ 功能建议', 
+            'praise': '👍 点赞表扬', 
+            'suggestion': '💡 学习建议', 
+            'question': '❓ 问题咨询', 
+            'other': '📝 其他' 
+        };
+        return map[type] || type || '📝 其他';
     },
 
     getStatusLabel(status) {
-        const map = { 'open': '待处理', 'pending': '待处理', 'processing': '处理中', 'resolved': '已解决', 'closed': '已关闭' };
-        return map[status] || status || '待处理';
+        const map = { 
+            'pending': '⏳ 待处理', 
+            'processing': '🔄 处理中', 
+            'resolved': '✅ 已解决', 
+            'closed': '🔒 已关闭' 
+        };
+        return map[status] || status || '⏳ 待处理';
     }
 };
 
@@ -511,26 +530,59 @@ const FeedbackController = {
     // 初始化
     async init() {
         try {
+            // 先绑定事件，确保即使加载数据失败，过滤器和搜索也能用
+            this.bindEvents();
+
             FeedbackState.ui.isLoading = true;
             await this.loadFeedbacks();
-            this.bindEvents();
+            
             // 检查 URL 参数，如果有 id，自动打开详情
             const urlParams = new URLSearchParams(window.location.search);
             const feedbackId = urlParams.get('id');
             if (feedbackId) {
                 this.viewFeedbackDetail(parseInt(feedbackId, 10));
             }
+            
             FeedbackState.ui.isLoading = false;
         } catch (error) {
-            console.error('反馈模块初始化失败:', error);
+            console.error('FeedbackController init failed:', error);
+            FeedbackState.ui.isLoading = false;
+            // 即使加载失败也更新一次统计（显示0）
+            FeedbackUI.updateStats([]);
             FeedbackUI.showNotification('初始化失败，请刷新页面重试', 'error');
         }
     },
 
     // 加载反馈列表
-    async loadFeedbacks(params = {}) {
+    async loadFeedbacks(params = null) {
         try {
-            const feedbacks = await FeedbackAPI.fetchFeedbacks(params);
+            // 如果传了参数，更新全局状态以保持同步
+            if (params) {
+                if (params.type !== undefined) {
+                    FeedbackState.filter.type = params.type;
+                    const el = document.getElementById('filter-type');
+                    if (el) el.value = params.type;
+                }
+                if (params.status !== undefined) {
+                    FeedbackState.filter.status = params.status;
+                    const el = document.getElementById('filter-status');
+                    if (el) el.value = params.status;
+                }
+                if (params.search !== undefined) {
+                    FeedbackState.filter.search = params.search;
+                    const el = document.getElementById('search-feedback');
+                    if (el) el.value = params.search;
+                }
+            }
+
+            // 构建最终抓取参数
+            const fetchParams = {
+                type: FeedbackState.filter.type,
+                status: FeedbackState.filter.status,
+                search: FeedbackState.filter.search
+            };
+            
+            const feedbacks = await FeedbackAPI.fetchFeedbacks(fetchParams);
             FeedbackState.feedbacks = feedbacks;
             // 过滤 / 搜索时重置到第一页
             FeedbackState.ui.currentPage = 1;
@@ -538,6 +590,55 @@ const FeedbackController = {
             FeedbackUI.updateStats(feedbacks);
         } catch (error) {
             console.error('加载反馈失败:', error);
+        }
+    },
+
+    // 显示发布反馈表单
+    showFeedbackForm() {
+        const form = document.getElementById('feedbackForm');
+        if (form) {
+            form.style.display = 'block';
+            FeedbackState.ui.showForm = true;
+        }
+    },
+
+    // 隐藏发布反馈表单
+    hideFeedbackForm() {
+        const form = document.getElementById('feedbackForm');
+        if (form) {
+            form.style.display = 'none';
+            FeedbackState.ui.showForm = false;
+        }
+    },
+
+    // 提交新反馈
+    async submitFeedback() {
+        const type = document.getElementById('fbType')?.value;
+        const title = document.getElementById('fbTitle')?.value;
+        const content = document.getElementById('fbContent')?.value;
+        
+        if (!title || !content) {
+            alert('请填写标题和内容');
+            return;
+        }
+        
+        try {
+            await FeedbackAPI.createFeedback({
+                type,
+                title,
+                content,
+                anonymous_id: FeedbackState.user.id // 统一使用当前用户ID
+            });
+            alert('反馈发布成功！');
+            this.hideFeedbackForm();
+            // 重置表单
+            if (document.getElementById('fbTitle')) document.getElementById('fbTitle').value = '';
+            if (document.getElementById('fbContent')) document.getElementById('fbContent').value = '';
+            // 刷新列表
+            await this.loadFeedbacks();
+        } catch (error) {
+            console.error('发布反馈失败:', error);
+            alert('发布失败: ' + error.message);
         }
     },
 
@@ -553,12 +654,141 @@ const FeedbackController = {
     async toggleLike(id) {
         try {
             await FeedbackAPI.likeFeedback(id);
-            await this.loadFeedbacks(); // 重新加载以更新点赞状态
+            // 刷新当前列表
+            await this.loadFeedbacks();
+            // 如果是在详情模态框中，重新获取详情以更新显示
+            if (FeedbackState.ui.showDetailModal && FeedbackState.ui.currentFeedbackId === id) {
+                const updated = await FeedbackAPI.fetchFeedbackDetail(id);
+                FeedbackUI.openDetailModal(updated);
+            }
             FeedbackUI.showNotification('点赞成功', 'success');
         } catch (error) {
             console.error('点赞失败:', error);
             FeedbackUI.showNotification('点赞失败', 'error');
         }
+    },
+
+    // 教师回复反馈
+    async respondFeedback(id, responseText) {
+        try {
+            await FeedbackAPI.request(`/api/feedback/${id}/respond`, {
+                method: 'POST',
+                body: JSON.stringify({ response: responseText })
+            });
+            return true;
+        } catch (error) {
+            console.error('回复失败:', error);
+            throw error;
+        }
+    },
+
+    // 教师更新反馈状态
+    async updateStatus(id, status) {
+        try {
+            await FeedbackAPI.request(`/api/feedback/${id}/status`, {
+                method: 'PUT',
+                body: JSON.stringify({ status })
+            });
+            return true;
+        } catch (error) {
+            console.error('更新状态失败:', error);
+            throw error;
+        }
+    },
+
+    // 教师删除反馈
+    async deleteFeedback(id) {
+        try {
+            await FeedbackAPI.request(`/api/feedback/${id}`, {
+                method: 'DELETE'
+            });
+            return true;
+        } catch (error) {
+            console.error('删除失败:', error);
+            throw error;
+        }
+    },
+
+    // 显示状态切换菜单（教师端使用）
+    showStatusMenu(feedbackId, currentStatus, evt) {
+        const button = evt && (evt.currentTarget || evt.target);
+        if (!button) return;
+
+        // 如果已有菜单，先移除
+        let existing = document.getElementById('feedback-status-dropdown');
+        if (existing) {
+            existing.remove();
+            if (existing.dataset.forId === String(feedbackId)) return;
+        }
+
+        const statuses = [
+            { value: 'pending', text: '待处理' },
+            { value: 'processing', text: '处理中' },
+            { value: 'resolved', text: '已解决' },
+            { value: 'closed', text: '已关闭' }
+        ];
+
+        const rect = button.getBoundingClientRect();
+        const menu = document.createElement('div');
+        menu.id = 'feedback-status-dropdown';
+        menu.dataset.forId = String(feedbackId);
+        Object.assign(menu.style, {
+            position: 'fixed',
+            top: `${rect.bottom + 4}px`,
+            left: `${rect.left}px`,
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 8px 16px rgba(15,23,42,0.15)',
+            borderRadius: '8px',
+            zIndex: '2000',
+            minWidth: '140px',
+            padding: '4px 0'
+        });
+
+        menu.innerHTML = statuses.map(s => `
+            <button type="button" data-status="${s.value}"
+                    style="width: 100%; padding: 8px 16px; background: ${s.value === currentStatus ? '#eff6ff' : 'transparent'};
+                           border: none; text-align: left; font-size: 13px; color: #374151; cursor: pointer;"
+                    onmouseover="this.style.background='#eff6ff'"
+                    onmouseout="this.style.background='${s.value === currentStatus ? '#eff6ff' : 'transparent'}'">
+                ${s.text}
+            </button>
+        `).join('');
+
+        document.body.appendChild(menu);
+
+        const onOutsideClick = (e) => {
+            if (!menu.contains(e.target) && !button.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', onOutsideClick, true);
+            }
+        };
+
+        menu.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-status]');
+            if (!btn) return;
+            const status = btn.getAttribute('data-status');
+            menu.remove();
+            document.removeEventListener('click', onOutsideClick, true);
+            
+            if (confirm(`确定要将状态更新为"${btn.textContent.trim()}"吗？`)) {
+                try {
+                    await this.updateStatus(feedbackId, status);
+                    FeedbackUI.showNotification('状态更新成功', 'success');
+                    await this.loadFeedbacks();
+                } catch (error) {
+                    FeedbackUI.showNotification('状态更新失败', 'error');
+                }
+            }
+        });
+
+        setTimeout(() => document.addEventListener('click', onOutsideClick, true), 0);
+    },
+
+    // 显示回复对话框（教师端使用）
+    showRespondModal(feedbackId) {
+        // 直接使用 viewFeedbackDetail 打开详情模态框，详情模态框中已有回复功能
+        this.viewFeedbackDetail(feedbackId);
     },
 
     // 查看反馈详情（使用模态框）
@@ -589,8 +819,11 @@ const FeedbackController = {
         const typeFilter = document.getElementById('filter-type');
         if (typeFilter) {
             typeFilter.addEventListener('change', (e) => {
-                FeedbackState.filter.type = e.target.value;
-                this.loadFeedbacks({ type: e.target.value });
+                this.loadFeedbacks({ 
+                    type: e.target.value,
+                    status: document.getElementById('filter-status')?.value || '',
+                    search: document.getElementById('search-feedback')?.value || ''
+                });
             });
         }
 
@@ -598,11 +831,10 @@ const FeedbackController = {
         const statusFilter = document.getElementById('filter-status');
         if (statusFilter) {
             statusFilter.addEventListener('change', (e) => {
-                FeedbackState.filter.status = e.target.value;
                 this.loadFeedbacks({ 
-                    type: FeedbackState.filter.type,
+                    type: document.getElementById('filter-type')?.value || '',
                     status: e.target.value,
-                    search: FeedbackState.filter.search
+                    search: document.getElementById('search-feedback')?.value || ''
                 });
             });
         }
@@ -612,36 +844,24 @@ const FeedbackController = {
         const searchBtn = document.getElementById('search-btn');
         
         if (searchBtn && searchInput) {
-            searchBtn.addEventListener('click', () => {
-                FeedbackState.filter.search = searchInput.value;
+            searchBtn.onclick = () => {
                 this.loadFeedbacks({ 
-                    type: FeedbackState.filter.type,
-                    status: FeedbackState.filter.status,
+                    type: document.getElementById('filter-type')?.value || '',
+                    status: document.getElementById('filter-status')?.value || '',
                     search: searchInput.value
                 });
-            });
+            };
             
             // 回车搜索
-            searchInput.addEventListener('keypress', (e) => {
+            searchInput.onkeypress = (e) => {
                 if (e.key === 'Enter') {
-                    FeedbackState.filter.search = searchInput.value;
                     this.loadFeedbacks({ 
-                        type: FeedbackState.filter.type,
-                        status: FeedbackState.filter.status,
+                        type: document.getElementById('filter-type')?.value || '',
+                        status: document.getElementById('filter-status')?.value || '',
                         search: searchInput.value
                     });
                 }
-            });
-        }
-
-        // 新建反馈按钮
-        const newBtn = document.getElementById('new-feedback-btn');
-        if (newBtn) {
-            newBtn.addEventListener('click', () => {
-                FeedbackState.ui.showForm = true;
-                // 简化版：提示用户功能开发中
-                alert('新建反馈功能将在后续版本支持');
-            });
+            };
         }
 
         // 使用事件委托监听反馈卡片上的详情链接点击（防止innerHTML覆盖后事件失效）
@@ -675,34 +895,6 @@ const FeedbackController = {
         FeedbackController.init();
     }
 })();
-
-// 导出缺少的控制器方法（需要在实际项目中实现，此处先给出空实现避免报错）
-FeedbackController.respondFeedback = FeedbackController.respondFeedback || async function(id, response) {
-    // 调用后端 /api/feedback/:id/respond 接口
-    await FeedbackAPI.request(`/api/feedback/${id}/respond`, {
-        method: 'POST',
-        body: JSON.stringify({ response })
-    });
-};
-
-FeedbackController.updateStatus = FeedbackController.updateStatus || async function(id, status) {
-    // 调用后端 /api/feedback/:id/status 接口 (PUT)
-    await FeedbackAPI.request(`/api/feedback/${id}/status`, {
-        method: 'PUT',
-        body: JSON.stringify({ status })
-    });
-};
-
-FeedbackController.deleteFeedback = FeedbackController.deleteFeedback || async function(id) {
-    // 调用后端 /api/feedback/:id 接口 (DELETE)
-    await FeedbackAPI.request(`/api/feedback/${id}`, {
-        method: 'DELETE'
-    });
-};
-
-FeedbackController.toggleLike = FeedbackController.toggleLike || async function(id) {
-    // 已实现，此处保留防止重复定义
-};
 
 // 导出全局接口
 window.FeedbackController = FeedbackController;

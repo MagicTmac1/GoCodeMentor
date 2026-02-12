@@ -27,6 +27,25 @@ func (r *feedbackRepository) GetAll() ([]model.Feedback, error) {
 	return feedbacks, err
 }
 
+func (r *feedbackRepository) GetFiltered(feedbackType, status, search string) ([]model.Feedback, error) {
+	var feedbacks []model.Feedback
+	query := r.db.Model(&model.Feedback{})
+
+	if feedbackType != "" {
+		query = query.Where("type = ?", feedbackType)
+	}
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+	if search != "" {
+		searchText := "%" + search + "%"
+		query = query.Where("title LIKE ? OR content LIKE ? OR anonymous_id LIKE ?", searchText, searchText, searchText)
+	}
+
+	err := query.Order("like_count desc, created_at desc").Find(&feedbacks).Error
+	return feedbacks, err
+}
+
 func (r *feedbackRepository) GetByID(id uint) (*model.Feedback, error) {
 	var feedback model.Feedback
 	err := r.db.First(&feedback, id).Error

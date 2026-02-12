@@ -26,6 +26,10 @@ func Setup(
 	r.POST("/api/register", userHandler.Register)
 	r.POST("api/login", userHandler.Login)
 
+	// Handle common browser/tool ghost requests to keep logs clean
+	r.GET("/.well-known/appspecific/com.chrome.devtools.json", func(c *gin.Context) { c.Status(204) })
+	r.GET("/favicon.ico", func(c *gin.Context) { c.Status(204) })
+
 	// Authenticated routes
 	authorized := r.Group("/")
 	authorized.Use(authMiddleware)
@@ -93,7 +97,7 @@ func Setup(
 
 		// Feedback
 		api.POST("/feedback", feedbackHandler.CreateFeedback)
-		api.GET("/feedback", feedbackHandler.GetAllFeedback)
+		api.GET("/feedback", feedbackHandler.GetFilteredFeedback)
 		api.GET("/feedback/:id", feedbackHandler.GetFeedbackByID)
 		api.POST("/feedback/:id/like", feedbackHandler.LikeFeedback)
 		api.PUT("/feedback/:id/status", feedbackHandler.UpdateFeedbackStatus)

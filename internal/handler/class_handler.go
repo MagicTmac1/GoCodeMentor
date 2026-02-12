@@ -245,17 +245,40 @@ func (h *ClassHandler) GetClassStats(c *gin.Context) {
 		return
 	}
 
-	var pendingCount int
+	type AssignmentStat struct {
+		ID               string   `json:"id"`
+		Title            string   `json:"title"`
+		SubmittedCount   int      `json:"submitted_count"`
+		UnsubmittedCount int      `json:"unsubmitted_count"`
+		UnsubmittedUsers []string `json:"unsubmitted_users"`
+	}
+
+	var assignmentStats []AssignmentStat
+	classUnsubmittedSet := make(map[string]bool)
+
 	for _, assign := range assignments {
-		count, err := h.assignSvc.GetPendingSubmissionCountByAssignment(assign.ID)
-		if err == nil {
-			pendingCount += int(count)
+		stat := AssignmentStat{
+			ID:    assign.ID,
+			Title: assign.Title,
 		}
+
+		for _, student := range students {
+			submission, err := h.assignSvc.GetSubmissionByAssignmentAndStudent(assign.ID, student.ID)
+			if err != nil || submission == nil {
+				stat.UnsubmittedCount++
+				stat.UnsubmittedUsers = append(stat.UnsubmittedUsers, student.Name)
+				classUnsubmittedSet[student.ID] = true
+			} else {
+				stat.SubmittedCount++
+			}
+		}
+		assignmentStats = append(assignmentStats, stat)
 	}
 
 	c.JSON(200, gin.H{
-		"student_count":    len(students),
-		"assignment_count": len(assignments),
-		"pending_count":    pendingCount,
+		"student_count":     len(students),
+		"assignment_count":  len(assignments),
+		"unsubmitted_count": len(classUnsubmittedSet),
+		"assignment_stats":  assignmentStats,
 	})
 }

@@ -28,11 +28,14 @@ func (r *submissionRepository) GetByID(id string) (*model.Submission, error) {
 
 func (r *submissionRepository) GetByAssignmentAndStudent(assignmentID, studentID string) (*model.Submission, error) {
 	var submission model.Submission
-	err := r.db.Where("assignment_id = ? AND student_id = ?", assignmentID, studentID).First(&submission).Error
-	if err == gorm.ErrRecordNotFound {
+	result := r.db.Where("assignment_id = ? AND student_id = ?", assignmentID, studentID).Limit(1).Find(&submission)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
 		return nil, nil
 	}
-	return &submission, err
+	return &submission, nil
 }
 
 func (r *submissionRepository) Update(submission *model.Submission) error {

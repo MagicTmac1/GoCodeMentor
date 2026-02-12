@@ -78,11 +78,11 @@ func (s *FeedbackService) GetStats() (map[string]interface{}, error) {
 	}
 
 	stats := map[string]interface{}{
-		"total":     len(feedbacks),
-		"pending":   0,
+		"total":      len(feedbacks),
+		"pending":    0,
 		"processing": 0,
-		"resolved":  0,
-		"closed":    0,
+		"resolved":   0,
+		"closed":     0,
 		"by_type": map[string]int{
 			"bug":        0,
 			"feature":    0,
@@ -117,43 +117,5 @@ func (s *FeedbackService) GetStats() (map[string]interface{}, error) {
 
 // GetFiltered 根据条件过滤反馈
 func (s *FeedbackService) GetFiltered(feedbackType, status, search string) ([]model.Feedback, error) {
-	feedbacks, err := s.feedbackRepo.GetAll()
-	if err != nil {
-		return nil, err
-	}
-
-	var filtered []model.Feedback
-	for _, f := range feedbacks {
-		// 类型过滤
-		if feedbackType != "" && f.Type != feedbackType {
-			continue
-		}
-		// 状态过滤
-		if status != "" && f.Status != status {
-			continue
-		}
-		// 关键词搜索（标题和内容）
-		if search != "" {
-			if !contains(f.Title, search) && !contains(f.Content, search) {
-				continue
-			}
-		}
-		filtered = append(filtered, f)
-	}
-
-	return filtered, nil
-}
-
-// 辅助函数：检查字符串是否包含子串
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (substr == "" || indexOf(s, substr) >= 0)
-}
-
-func indexOf(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
+	return s.feedbackRepo.GetFiltered(feedbackType, status, search)
 }

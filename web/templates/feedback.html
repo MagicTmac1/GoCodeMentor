@@ -372,7 +372,7 @@
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding: 20px 0;">
     <h2 style="font-size: 28px; color: #333; margin: 0; font-weight: 600;">💡 意见反馈</h2>
     <div style="display: flex; gap: 12px;">
-        <button id="new-feedback-btn" class="btn" style="padding: 12px 24px; font-size: 14px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+        <button id="new-feedback-btn" class="btn" style="padding: 12px 24px; font-size: 14px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);" onclick="window.FeedbackController?.showFeedbackForm()">
             📝 发布反馈
         </button>
     </div>
@@ -380,19 +380,19 @@
 
 <!-- 统计卡片区域 -->
 <div id="feedbackStats" class="feedback-stats">
-    <div class="feedback-stat-card">
+    <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({type: '', status: '', search: ''})">
         <div style="font-size: 14px; color: #666; margin-bottom: 8px;">总反馈数</div>
         <div id="total-feedbacks" style="font-size: 32px; font-weight: 600; color: #667eea;">0</div>
     </div>
-    <div class="feedback-stat-card">
+    <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({status: 'pending'})">
         <div style="font-size: 14px; color: #666; margin-bottom: 8px;">待处理</div>
         <div id="pending-feedbacks" style="font-size: 32px; font-weight: 600; color: #e6a23c;">0</div>
     </div>
-    <div class="feedback-stat-card">
+    <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({status: 'resolved'})">
         <div style="font-size: 14px; color: #666; margin-bottom: 8px;">已解决</div>
         <div id="resolved-feedbacks" style="font-size: 32px; font-weight: 600; color: #67c23a;">0</div>
     </div>
-    <div class="feedback-stat-card">
+    <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({search: localStorage.getItem('user_id')})">
         <div style="font-size: 14px; color: #666; margin-bottom: 8px;">我的反馈</div>
         <div id="my-feedbacks" style="font-size: 32px; font-weight: 600; color: #409eff;">0</div>
     </div>
@@ -425,7 +425,7 @@
     <div style="flex: 1; max-width: 300px; display: flex; gap: 8px;">
         <input type="text" id="search-feedback" placeholder="🔍 搜索反馈内容..." 
                style="width: 100%; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
-        <button id="search-btn" style="display: none;">搜索</button>
+        <button id="search-btn" class="btn" style="padding: 8px 16px; font-size: 13px;">搜索</button>
     </div>
 </div>
 

@@ -79,6 +79,7 @@ type ChatMessageRepository interface {
 type FeedbackRepository interface {
 	Create(feedback *model.Feedback) error
 	GetAll() ([]model.Feedback, error)
+	GetFiltered(feedbackType, status, search string) ([]model.Feedback, error)
 	GetByID(id uint) (*model.Feedback, error)
 	Update(feedback *model.Feedback) error
 }

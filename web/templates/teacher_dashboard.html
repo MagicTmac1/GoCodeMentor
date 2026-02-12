@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>教师工作台 - GoCodeMentor</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <script src="/static/js/feedback.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -279,6 +281,183 @@
             gap: 10px;
             margin-top: 15px;
         }
+        
+        /* 统计详情弹窗统一样式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .stat-modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 550px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+            animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px) scale(0.95); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .stat-modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafbff;
+        }
+
+        .stat-modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-modal-body {
+            padding: 0;
+            overflow-y: auto;
+            flex: 1;
+            /* 自定义滚动条样式 */
+            scrollbar-width: thin;
+            scrollbar-color: #ddd transparent;
+        }
+
+        .stat-modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .stat-modal-body::-webkit-scrollbar-thumb {
+            background-color: #ddd;
+            border-radius: 10px;
+        }
+
+        .stat-modal-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .close-btn {
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            color: #666;
+        }
+
+        .summary-item {
+            padding: 16px 24px;
+            border-bottom: 1px solid #f5f5f5;
+            transition: background 0.2s;
+        }
+
+        .summary-item:hover {
+            background: #fcfdff;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-title {
+            font-weight: 600;
+            font-size: 15px;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .summary-stats {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 13px;
+        }
+
+        .stat-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .stat-badge.success {
+            background: #e6f7ed;
+            color: #28a745;
+        }
+
+        .stat-badge.danger {
+            background: #fff0f0;
+            color: #dc3545;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .stat-badge.danger:hover {
+            background: #ffe5e5;
+            text-decoration: underline;
+        }
+
+        .student-list {
+            padding: 15px 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+        }
+
+        .student-tag {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #555;
+            border: 1px solid #eee;
+        }
+
+        .student-tag i {
+            width: 6px;
+            height: 6px;
+            background: #dc3545;
+            border-radius: 50%;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #f0f0f0;
+            text-align: right;
+            background: #fafbff;
+        }
+
         .delete-btn {
             background: #dc3545;
             color: white;
@@ -527,12 +706,34 @@
             </div>
         </div>
 
+        <!-- 查看作业详情弹窗 -->
+        <div id="viewAssignmentModal" class="modal">
+            <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+                <h3 id="viewAssignmentTitle">作业详情</h3>
+                <div id="viewAssignmentContent" style="margin: 20px 0; line-height: 1.6;"></div>
+                <div class="modal-buttons">
+                    <button class="btn btn-secondary" onclick="hideViewAssignmentModal()">关闭</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 意见反馈页面 - 完整集成feedback.js -->
         <div id="feedbackSection" style="display: none;">
+            <div id="feedbackDetailModal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+                <div class="modal-content" style="background: white; border-radius: 16px; width: 90%; max-width: 650px; padding: 0; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+                    <div style="padding: 20px 30px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+                        <h2 style="margin: 0; font-size: 20px; color: #333;">反馈详情</h2>
+                        <span id="closeDetailModalBtn" style="cursor: pointer; font-size: 24px; color: #999;" onmouseover="this.style.color='#666'" onmouseout="this.style.color='#999'">&times;</span>
+                    </div>
+                    <div id="detailModalContent" style="padding: 30px; max-height: 70vh; overflow-y: auto;">
+                        <!-- 内容由 JS 动态生成 -->
+                    </div>
+                </div>
+            </div>
             <div class="section-title">
                 <h2>意见反馈</h2>
                 <div style="display: flex; gap: 12px;">
-                    <button id="teacher-new-feedback-btn" class="btn" style="padding: 12px 24px; font-size: 14px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+                    <button id="teacher-new-feedback-btn" class="btn" style="padding: 12px 24px; font-size: 14px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);" onclick="window.FeedbackController?.showFeedbackForm()">
                         📝 发布反馈
                     </button>
                 </div>
@@ -540,19 +741,19 @@
             
             <!-- 统计卡片区域 -->
             <div id="feedbackStats" class="feedback-stats">
-                <div class="feedback-stat-card">
+                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({type: '', status: '', search: ''})">
                     <div style="font-size: 14px; color: #666; margin-bottom: 8px;">总反馈数</div>
                     <div id="total-feedbacks" style="font-size: 32px; font-weight: 600; color: #667eea;">0</div>
                 </div>
-                <div class="feedback-stat-card">
+                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({status: 'pending'})">
                     <div style="font-size: 14px; color: #666; margin-bottom: 8px;">待处理</div>
                     <div id="pending-feedbacks" style="font-size: 32px; font-weight: 600; color: #e6a23c;">0</div>
                 </div>
-                <div class="feedback-stat-card">
+                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({status: 'resolved'})">
                     <div style="font-size: 14px; color: #666; margin-bottom: 8px;">已解决</div>
                     <div id="resolved-feedbacks" style="font-size: 32px; font-weight: 600; color: #67c23a;">0</div>
                 </div>
-                <div class="feedback-stat-card">
+                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({search: localStorage.getItem('user_id')})">
                     <div style="font-size: 14px; color: #666; margin-bottom: 8px;">我的反馈</div>
                     <div id="my-feedbacks" style="font-size: 32px; font-weight: 600; color: #409eff;">0</div>
                 </div>
@@ -585,7 +786,7 @@
                 <div style="flex: 1; max-width: 300px; display: flex; gap: 8px;">
                     <input type="text" id="search-feedback" placeholder="🔍 搜索反馈内容..." 
                            style="width: 100%; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
-                    <button id="search-btn" style="display: none;">搜索</button>
+                    <button id="search-btn" class="btn" style="padding: 8px 16px; font-size: 13px;">搜索</button>
                 </div>
             </div>
 
@@ -672,6 +873,13 @@
         const userName = localStorage.getItem('user_name');
         const userRole = localStorage.getItem('user_role');
 
+        // 设置 FeedbackState 用户信息
+        if (window.FeedbackState) {
+            window.FeedbackState.user.id = userId;
+            window.FeedbackState.user.role = userRole;
+            window.FeedbackState.user.name = userName;
+        }
+
         // 检查登录状态
         if (!userId || userRole !== 'teacher') {
             window.location.href = '/login';
@@ -680,7 +888,190 @@
         // 显示用户名
         document.getElementById('userName').textContent = userName || '教师';
 
+        function logout() {
+            localStorage.clear();
+            document.cookie = "user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = '/login';
+        }
+
+        function createAssignment() {
+            window.location.href = '/assignments';
+        }
+
+        function viewClass(classId) {
+            window.location.href = '/class/' + classId + '/students';
+        }
+
+        let currentAssignIdForPublish = null;
+        async function showMultiPublishModal(assignId) {
+            currentAssignIdForPublish = assignId;
+            const container = document.getElementById('classListForPublish');
+            container.innerHTML = '<p style="text-align: center; padding: 20px;">加载班级中...</p>';
+            document.getElementById('publishModal').style.display = 'flex';
+            
+            try {
+                // 加载所有班级
+                const classesRes = await fetch('/api/classes', {
+                    headers: { 'X-User-ID': userId, 'X-User-Role': userRole }
+                });
+                const classes = await classesRes.json();
+                
+                // 加载已发布班级
+                const publishedRes = await fetch(`/api/assignments/${assignId}/published`, {
+                    headers: { 'X-User-ID': userId, 'X-User-Role': userRole }
+                });
+                const publishedClasses = await publishedRes.json();
+                console.log('Published Classes:', publishedClasses);
+                console.log('All Classes:', classes);
+                
+                const publishedIds = new Set(publishedClasses.map(pc => String(pc.class_id || pc.ClassID)));
+                
+                container.innerHTML = classes.map(c => {
+                    const classIdStr = String(c.ID);
+                    const isPublished = publishedIds.has(classIdStr);
+                    return `
+                        <div class="class-publish-item">
+                            <div class="class-info">
+                                <div class="class-name">${c.Name}</div>
+                                <div class="student-count">邀请码: ${c.Code}</div>
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="datetime-local" id="deadline-${c.ID}" class="deadline-input" 
+                                    ${isPublished ? 'disabled' : ''}>
+                                <button class="action-btn ${isPublished ? 'published' : 'publish'}" 
+                                    onclick="${isPublished ? '' : `publishToClass('${c.ID}')`}"
+                                    ${isPublished ? 'disabled' : ''}>
+                                    ${isPublished ? '已发放' : '发布'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = '<p style="color: red; text-align: center;">加载失败</p>';
+            }
+        }
+
+        function hidePublishModal() {
+            document.getElementById('publishModal').style.display = 'none';
+            currentAssignIdForPublish = null;
+        }
+
+        function confirmMultiPublish() {
+            hidePublishModal();
+            loadAssignments();
+        }
+
+        async function publishToClass(classId) {
+            const deadlineVal = document.getElementById('deadline-' + classId).value;
+            if (!deadlineVal) {
+                alert('请选择截止时间');
+                return;
+            }
+
+            // 将 datetime-local 的格式转换为 YYYY-MM-DD
+            const deadlineDate = new Date(deadlineVal);
+            const formattedDeadline = deadlineDate.getFullYear() + '-' + 
+                                    String(deadlineDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                                    String(deadlineDate.getDate()).padStart(2, '0');
+
+            try {
+                const res = await fetch(`/api/assignments/${currentAssignIdForPublish}/publish`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    },
+                    body: JSON.stringify({
+                        class_id: classId,
+                        deadline: formattedDeadline
+                    })
+                });
+                
+                if (res.ok) {
+                    alert('发布成功！');
+                    showMultiPublishModal(currentAssignIdForPublish);
+                } else {
+                    const data = await res.json();
+                    alert('发布失败: ' + (data.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+
+        async function viewAssignment(id) {
+            try {
+                const res = await fetch('/api/assignments/' + id);
+                const data = await res.json();
+                
+                const assign = data.assignment || {};
+                const questions = data.questions || [];
+                
+                document.getElementById('viewAssignmentTitle').textContent = assign.Title || '作业详情';
+                
+                let html = `
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <p><strong>描述：</strong>${assign.Description || '无'}</p>
+                        <p><strong>状态：</strong>${assign.Status === 'published' ? '✅ 已发布' : '📝 草稿'}</p>
+                    </div>
+                `;
+                
+                if (questions.length > 0) {
+                    html += '<h4 style="margin-bottom: 10px;">题目列表</h4>';
+                    questions.forEach((q, idx) => {
+                        html += `
+                            <div style="border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 10px; background: white;">
+                                <p><strong>Q${idx + 1} (${q.Type || q.type}):</strong> ${q.Content || q.content}</p>
+                                ${q.Options || q.options ? `<p style="color: #666; font-size: 14px; margin: 5px 0;">选项：${q.Options || q.options}</p>` : ''}
+                                <p style="color: #28a745; font-size: 14px;">答案：${q.Answer || q.answer || '暂无'}</p>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<p style="color: #999; text-align: center;">暂无题目信息</p>';
+                }
+                
+                document.getElementById('viewAssignmentContent').innerHTML = html;
+                document.getElementById('viewAssignmentModal').style.display = 'flex';
+            } catch (e) {
+                alert('获取作业详情失败: ' + e.message);
+            }
+        }
+
+        function hideViewAssignmentModal() {
+            document.getElementById('viewAssignmentModal').style.display = 'none';
+        }
+
+        async function deleteAssignment(id) {
+            if (!confirm('确定要删除这个作业吗？此操作不可撤销。')) return;
+            
+            try {
+                const res = await fetch('/api/assignments/' + id, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+                
+                if (res.ok) {
+                    alert('删除成功');
+                    loadAssignments();
+                } else {
+                    const data = await res.json();
+                    alert('删除失败: ' + (data.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+
         // 加载班级列表
+        // 存储班级统计数据，用于弹窗展示
+        const classStatsCache = {};
+
         async function loadClassStats(classId) {
             try {
                 const statsRes = await fetch('/api/classes/' + classId + '/stats', {
@@ -692,6 +1083,7 @@
                 
                 if (statsRes.ok) {
                     const stats = await statsRes.json();
+                    classStatsCache[classId] = stats; // 缓存数据
                     
                     const studentEl = document.getElementById('student-count-' + classId);
                     if (studentEl) studentEl.textContent = stats.student_count;
@@ -699,8 +1091,8 @@
                     const assignEl = document.getElementById('assignment-count-' + classId);
                     if (assignEl) assignEl.textContent = stats.assignment_count;
                     
-                    const pendingEl = document.getElementById('pending-count-' + classId);
-                    if (pendingEl) pendingEl.textContent = stats.pending_count;
+                    const unsubmittedEl = document.getElementById('unsubmitted-count-' + classId);
+                    if (unsubmittedEl) unsubmittedEl.textContent = stats.unsubmitted_count;
                 } else {
                     console.warn('新统计API失败，使用旧实现');
                     await loadClassStatsFallback(classId);
@@ -738,7 +1130,7 @@
                     if (assignEl) assignEl.textContent = classAssignments.length;
                 }
                 
-                const pendingEl = document.getElementById('pending-count-' + classId);
+                const pendingEl = document.getElementById('unsubmitted-count-' + classId);
                 if (pendingEl) {
                     pendingEl.textContent = '0';
                 }
@@ -784,9 +1176,9 @@
                                     <div class="num" id="assignment-count-${c.ID}">-</div>
                                     <div class="label">作业</div>
                                 </div>
-                                <div>
-                                    <div class="num" id="pending-count-${c.ID}">-</div>
-                                    <div class="label">待批改</div>
+                                <div onclick="event.stopPropagation(); showUnsubmittedSummary('${c.ID}')" style="cursor: pointer;">
+                                    <div class="num" id="unsubmitted-count-${c.ID}">-</div>
+                                    <div class="label">未提交</div>
                                 </div>
                             </div>
                         </div>
@@ -819,8 +1211,7 @@
             }
             
             if (tab === 'feedback') {
-                loadFeedback();
-                setupTeacherFeedbackButton();
+                window.FeedbackController?.loadFeedbacks();
             }
             
             const url = new URL(window.location);
@@ -926,470 +1317,6 @@
             }
         }
 
-        // 反馈模块相关函数
-        // 当前过滤条件
-        let currentFeedbackFilters = {
-            type: '',
-            status: '',
-            search: ''
-        };
-
-        async function loadFeedbackStats() {
-            try {
-                const res = await fetch('/api/feedback/stats', {
-                    headers: {
-                        'X-User-ID': userId,
-                        'X-User-Role': userRole
-                    }
-                });
-                
-                if (res.ok) {
-                    const stats = await res.json();
-                    
-                    document.getElementById('total-feedbacks').textContent = stats.total || 0;
-                    document.getElementById('pending-feedbacks').textContent = stats.pending || 0;
-                    document.getElementById('resolved-feedbacks').textContent = stats.resolved || 0;
-                    
-                    // 计算我的反馈数（需要从列表中过滤，这里先留空）
-                    if (window.FeedbackController) {
-                        window.FeedbackController.updateMyFeedbackCount();
-                    }
-                }
-            } catch (e) {
-                console.error('加载反馈统计失败:', e);
-            }
-        }
-
-        async function loadFeedback() {
-            try {
-                const container = document.getElementById('feedback-list');
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 40px;">
-                        <div class="feedback-loading-spinner" style="margin-bottom: 16px;"></div>
-                        <p style="color: #666;">正在加载反馈数据...</p>
-                    </div>
-                `;
-                
-                // 构建查询参数
-                const params = new URLSearchParams();
-                if (currentFeedbackFilters.type) params.append('type', currentFeedbackFilters.type);
-                if (currentFeedbackFilters.status) params.append('status', currentFeedbackFilters.status);
-                if (currentFeedbackFilters.search) params.append('search', currentFeedbackFilters.search);
-                
-                const url = `/api/feedback/filter?${params.toString()}`;
-                const res = await fetch(url, {
-                    headers: {
-                        'X-User-ID': userId,
-                        'X-User-Role': userRole
-                    }
-                });
-                
-                if (res.ok) {
-                    const feedbacks = await res.json();
-                    
-                    // 更新统计
-                    loadFeedbackStats();
-                    
-                    if (!feedbacks || feedbacks.length === 0) {
-                        container.innerHTML = `
-                            <div class="empty-state">
-                                <div class="icon">💬</div>
-                                <h3>暂无反馈</h3>
-                                <p>点击"发布反馈"按钮发表你的意见</p>
-                            </div>
-                        `;
-                        return;
-                    }
-                    
-                    container.innerHTML = feedbacks.map(f => `
-                        <div class="feedback-card">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <div style="flex: 1;">
-                                    <span style="background: ${f.Type === 'bug' ? '#ffebee' : f.Type === 'feature' ? '#e3f2fd' : f.Type === 'praise' ? '#e8f5e9' : '#f3e5f5'}; 
-                                        color: ${f.Type === 'bug' ? '#c62828' : f.Type === 'feature' ? '#1565c0' : f.Type === 'praise' ? '#2e7d32' : '#6a1b9a'};
-                                        padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
-                                        ${f.Type === 'bug' ? '🐛 Bug' : f.Type === 'feature' ? '✨ 建议' : f.Type === 'praise' ? '👍 点赞' : f.Type === 'suggestion' ? '💡 学习建议' : f.Type === 'question' ? '❓ 咨询' : '📝 其他'}
-                                    </span>
-                                    <span style="margin-left: 10px; background: #f0f0f0; padding: 4px 12px; border-radius: 20px; font-size: 12px; color: #666;">
-                                        状态: ${f.Status === 'pending' ? '待处理' : f.Status === 'processing' ? '处理中' : f.Status === 'resolved' ? '已解决' : '已关闭'}
-                                    </span>
-                                    <h4 style="margin: 12px 0 8px; font-size: 18px; color: #333;">${f.Title}</h4>
-                                    <p style="color: #666; font-size: 14px; margin-bottom: 12px; line-height: 1.5;">${f.Content}</p>
-                                </div>
-                            </div>
-                            <div style="margin-top: 16px; color: #999; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; gap: 20px;">
-                                    <span>👤 ${f.AnonymousID || '匿名用户'}</span>
-                                    <span>📅 ${new Date(f.CreatedAt).toLocaleString('zh-CN')}</span>
-                                    <span>👍 ${f.LikeCount || 0}</span>
-                                </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <button class="feedback-like-btn" 
-                                        onclick="event.stopPropagation(); window.FeedbackController?.toggleLike('${f.ID}')">
-                                        👍 点赞
-                                    </button>
-                                    <button class="feedback-status-btn" 
-                                        onclick="event.stopPropagation(); window.FeedbackController?.showStatusMenu('${f.ID}', '${f.Status}', event)">
-                                        📋 更新状态
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-primary" 
-                                        onclick="event.stopPropagation(); window.FeedbackController?.showRespondModal('${f.ID}')">
-                                        💬 回复
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary" 
-                                        onclick="event.stopPropagation(); window.FeedbackController?.viewFeedbackDetail('${f.ID}')">
-                                        🔍 详情
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    // 如果过滤API失败，降级到基础API
-                    await loadFeedbackFallback();
-                }
-            } catch (e) {
-                console.error('加载过滤反馈失败:', e);
-                await loadFeedbackFallback();
-            }
-        }
-
-        // 降级方案：使用基础API加载反馈
-        async function loadFeedbackFallback() {
-            try {
-                const res = await fetch('/api/feedback', {
-                    headers: {
-                        'X-User-ID': userId,
-                        'X-User-Role': userRole
-                    }
-                });
-                
-                if (res.ok) {
-                    const feedbacks = await res.json();
-                    const container = document.getElementById('feedback-list');
-                    
-                    if (!feedbacks || feedbacks.length === 0) {
-                        container.innerHTML = `
-                            <div class="empty-state">
-                                <div class="icon">💬</div>
-                                <h3>暂无反馈</h3>
-                                <p>点击"发布反馈"按钮发表你的意见</p>
-                            </div>
-                        `;
-                        return;
-                    }
-                    
-                    container.innerHTML = feedbacks.map(f => `
-                        <div class="feedback-card">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <div style="flex: 1;">
-                                    <span style="background: ${f.Type === 'bug' ? '#ffebee' : f.Type === 'feature' ? '#e3f2fd' : f.Type === 'praise' ? '#e8f5e9' : '#f3e5f5'}; 
-                                        color: ${f.Type === 'bug' ? '#c62828' : f.Type === 'feature' ? '#1565c0' : f.Type === 'praise' ? '#2e7d32' : '#6a1b9a'};
-                                        padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
-                                        ${f.Type === 'bug' ? '🐛 Bug' : f.Type === 'feature' ? '✨ 建议' : f.Type === 'praise' ? '👍 点赞' : f.Type === 'suggestion' ? '💡 学习建议' : f.Type === 'question' ? '❓ 咨询' : '📝 其他'}
-                                    </span>
-                                    <span style="margin-left: 10px; background: #f0f0f0; padding: 4px 12px; border-radius: 20px; font-size: 12px; color: #666;">
-                                        状态: ${f.Status === 'pending' ? '待处理' : f.Status === 'processing' ? '处理中' : f.Status === 'resolved' ? '已解决' : '已关闭'}
-                                    </span>
-                                    <h4 style="margin: 12px 0 8px; font-size: 18px; color: #333;">${f.Title}</h4>
-                                    <p style="color: #666; font-size: 14px; margin-bottom: 12px; line-height: 1.5;">${f.Content}</p>
-                                </div>
-                            </div>
-                            <div style="margin-top: 16px; color: #999; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; gap: 20px;">
-                                    <span>👤 ${f.AnonymousID || '匿名用户'}</span>
-                                    <span>📅 ${new Date(f.CreatedAt).toLocaleString('zh-CN')}</span>
-                                    <span>👍 ${f.LikeCount || 0}</span>
-                                </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <button class="feedback-like-btn" 
-                                        onclick="event.stopPropagation(); window.FeedbackController?.toggleLike('${f.ID}')">
-                                        👍 点赞
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary" 
-                                        onclick="event.stopPropagation(); window.FeedbackController?.viewFeedbackDetail('${f.ID}')">
-                                        🔍 详情
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch (e) {
-                console.error('加载反馈降级失败:', e);
-            }
-        }
-
-        function setupTeacherFeedbackButton() {
-            const btn = document.getElementById('teacher-new-feedback-btn');
-            if (btn) {
-                // 移除旧的监听器，添加新的
-                btn.replaceWith(btn.cloneNode(true));
-                const newBtn = document.getElementById('teacher-new-feedback-btn');
-                newBtn.onclick = function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const form = document.getElementById('feedbackForm');
-                    if (form) {
-                        form.style.display = form.style.display === 'none' ? 'block' : 'none';
-                    } else {
-                        console.error('反馈表单未找到');
-                    }
-                    return false;
-                };
-            }
-        }
-
-        // FeedbackController 完整实现
-        window.FeedbackController = {
-            submitFeedback: async function() {
-                const type = document.getElementById('fbType')?.value;
-                const title = document.getElementById('fbTitle')?.value;
-                const content = document.getElementById('fbContent')?.value;
-                
-                if (!title || !content) {
-                    alert('请填写标题和内容');
-                    return;
-                }
-                
-                try {
-                    const res = await fetch('/api/feedback', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-User-ID': userId,
-                            'X-User-Role': userRole
-                        },
-                        body: JSON.stringify({
-                            type: type,
-                            title: title,
-                            content: content,
-                            anonymous_id: userId // 教师使用自己的ID作为匿名标识
-                        })
-                    });
-                    
-                    if (res.ok) {
-                        alert('反馈发布成功！');
-                        this.hideFeedbackForm();
-                        document.getElementById('fbTitle').value = '';
-                        document.getElementById('fbContent').value = '';
-                        loadFeedback();
-                        loadFeedbackStats();
-                    } else {
-                        const err = await res.json();
-                        alert(err.error || '发布失败');
-                    }
-                } catch (e) {
-                    alert('网络错误: ' + e.message);
-                }
-            },
-            
-            hideFeedbackForm: function() {
-                const form = document.getElementById('feedbackForm');
-                if (form) {
-                    form.style.display = 'none';
-                }
-            },
-            
-            updateStats: function(feedbacks) {
-                const totalEl = document.getElementById('total-feedbacks');
-                const pendingEl = document.getElementById('pending-feedbacks');
-                const resolvedEl = document.getElementById('resolved-feedbacks');
-                
-                if (totalEl) totalEl.textContent = feedbacks.length;
-                if (pendingEl) pendingEl.textContent = feedbacks.filter(f => f.Status === 'pending' || f.Status === 'processing').length;
-                if (resolvedEl) resolvedEl.textContent = feedbacks.filter(f => f.Status === 'resolved').length;
-                this.updateMyFeedbackCount();
-            },
-            
-            updateMyFeedbackCount: async function() {
-                try {
-                    const res = await fetch('/api/feedback', {
-                        headers: {
-                            'X-User-ID': userId,
-                            'X-User-Role': userRole
-                        }
-                    });
-                    if (res.ok) {
-                        const feedbacks = await res.json();
-                        const myEl = document.getElementById('my-feedbacks');
-                        if (myEl) {
-                            myEl.textContent = feedbacks.filter(f => f.AnonymousID === userId).length;
-                        }
-                    }
-                } catch (e) {
-                    console.error('获取我的反馈数失败:', e);
-                }
-            },
-            
-            toggleLike: async function(feedbackId) {
-                try {
-                    const res = await fetch(`/api/feedback/${feedbackId}/like`, {
-                        method: 'POST',
-                        headers: {
-                            'X-User-ID': userId,
-                            'X-User-Role': userRole
-                        }
-                    });
-                    if (res.ok) {
-                        loadFeedback();
-                        loadFeedbackStats();
-                    } else {
-                        alert('点赞失败');
-                    }
-                } catch (e) {
-                    console.error('点赞失败:', e);
-                    alert('网络错误');
-                }
-            },
-            
-            showStatusMenu: function(feedbackId, currentStatus, evt) {
-                const button = evt && (evt.currentTarget || evt.target);
-                if (!button) return;
-
-                // 如果已有菜单，先移除
-                let existing = document.getElementById('feedback-status-dropdown');
-                if (existing) {
-                    existing.remove();
-                    // 如果是同一个按钮再次点击，则直接关闭
-                    if (existing.dataset.forId === String(feedbackId)) {
-                        return;
-                    }
-                }
-
-                const statuses = [
-                    { value: 'pending', text: '待处理' },
-                    { value: 'processing', text: '处理中' },
-                    { value: 'resolved', text: '已解决' },
-                    { value: 'closed', text: '已关闭' }
-                ];
-
-                const rect = button.getBoundingClientRect();
-                const menu = document.createElement('div');
-                menu.id = 'feedback-status-dropdown';
-                menu.dataset.forId = String(feedbackId);
-                menu.style.position = 'fixed';
-                menu.style.top = (rect.bottom + 4) + 'px';
-                menu.style.left = rect.left + 'px';
-                menu.style.background = '#fff';
-                menu.style.border = '1px solid #e5e7eb';
-                menu.style.boxShadow = '0 8px 16px rgba(15,23,42,0.15)';
-                menu.style.borderRadius = '8px';
-                menu.style.zIndex = '2000';
-                menu.style.minWidth = '140px';
-                menu.style.padding = '4px 0';
-
-                menu.innerHTML = statuses.map(s => `
-                    <button type="button"
-                            data-status="${s.value}"
-                            style="
-                                width: 100%;
-                                padding: 6px 12px;
-                                background: ${s.value === currentStatus ? '#eff6ff' : 'transparent'};
-                                border: none;
-                                text-align: left;
-                                font-size: 13px;
-                                color: #374151;
-                                cursor: pointer;
-                            "
-                            onmouseover="this.style.background='#eff6ff'"
-                            onmouseout="this.style.background='${s.value === currentStatus ? '#eff6ff' : 'transparent'}'">
-                        ${s.text}
-                    </button>
-                `).join('');
-
-                document.body.appendChild(menu);
-
-                const onClickOption = (e) => {
-                    const target = e.target.closest('button[data-status]');
-                    if (!target) return;
-                    const status = target.getAttribute('data-status');
-                    if (!status) return;
-                    document.removeEventListener('click', onOutsideClick, true);
-                    menu.remove();
-                    window.FeedbackController.updateFeedbackStatus(feedbackId, status);
-                };
-
-                const onOutsideClick = (e) => {
-                    if (menu.contains(e.target)) return;
-                    if (button.contains(e.target)) return;
-                    menu.remove();
-                    document.removeEventListener('click', onOutsideClick, true);
-                };
-
-                menu.addEventListener('click', onClickOption);
-                setTimeout(() => {
-                    document.addEventListener('click', onOutsideClick, true);
-                }, 0);
-            },
-            
-            updateFeedbackStatus: async function(feedbackId, status) {
-                if (!confirm(`确定将反馈状态更新为"${status === 'pending' ? '待处理' : status === 'processing' ? '处理中' : status === 'resolved' ? '已解决' : '已关闭'}"吗？`)) {
-                    return;
-                }
-                
-                try {
-                    const res = await fetch(`/api/feedback/${feedbackId}/status`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-User-ID': userId,
-                            'X-User-Role': userRole
-                        },
-                        body: JSON.stringify({ status })
-                    });
-                    
-                    if (res.ok) {
-                        alert('状态更新成功！');
-                        loadFeedback();
-                        loadFeedbackStats();
-                    } else {
-                        const err = await res.json();
-                        alert(err.error || '更新状态失败');
-                    }
-                } catch (e) {
-                    console.error('更新反馈状态失败:', e);
-                    alert('网络错误');
-                }
-            },
-            
-            showRespondModal: function(feedbackId) {
-                const response = prompt('请输入您的回复：');
-                if (response === null || response.trim() === '') return;
-                this.respondToFeedback(feedbackId, response.trim());
-            },
-            
-            respondToFeedback: async function(feedbackId, response) {
-                try {
-                    const res = await fetch(`/api/feedback/${feedbackId}/respond`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-User-ID': userId,
-                            'X-User-Role': userRole
-                        },
-                        body: JSON.stringify({ response })
-                    });
-                    
-                    if (res.ok) {
-                        alert('回复成功！');
-                        loadFeedback();
-                        loadFeedbackStats();
-                    } else {
-                        const err = await res.json();
-                        alert(err.error || '回复失败');
-                    }
-                } catch (e) {
-                    console.error('回复反馈失败:', e);
-                    alert('网络错误');
-                }
-            },
-            
-            viewFeedbackDetail: function(feedbackId) {
-                window.location.href = `/feedback?id=${feedbackId}`;
-            }
-        };
-
         function showCreateModal() {
             document.getElementById('createModal').style.display = 'flex';
         }
@@ -1441,13 +1368,93 @@
             }
         }
 
+        // 显示未提交作业汇总弹窗
+        function showUnsubmittedSummary(classId) {
+            const stats = classStatsCache[classId];
+            if (!stats || !stats.assignment_stats || stats.assignment_stats.length === 0) {
+                alert('暂无作业发布记录或统计数据');
+                return;
+            }
+
+            const modalHtml = `
+                <div id="unsubmittedSummaryModal" class="modal-overlay">
+                    <div class="stat-modal-content">
+                        <div class="stat-modal-header">
+                            <h3>📊 作业提交概况</h3>
+                            <span class="close-btn" onclick="closeModal('unsubmittedSummaryModal')">&times;</span>
+                        </div>
+                        <div class="stat-modal-body">
+                            ${stats.assignment_stats.map(as => `
+                                <div class="summary-item">
+                                    <span class="summary-title">${as.title}</span>
+                                    <div class="summary-stats">
+                                        <span class="stat-badge success">已提交 ${as.submitted_count}</span>
+                                        <span class="stat-badge danger" onclick="showUnsubmittedStudents('${classId}', '${as.id}')">
+                                            未提交 ${as.unsubmitted_count}
+                                        </span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary btn-sm" onclick="closeModal('unsubmittedSummaryModal')">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        // 显示具体作业未提交学生名单
+        function showUnsubmittedStudents(classId, assignmentId) {
+            const stats = classStatsCache[classId];
+            const assignStat = stats.assignment_stats.find(as => as.id === assignmentId);
+            
+            if (!assignStat) return;
+
+            // 先关闭汇总弹窗（如果存在）
+            closeModal('unsubmittedSummaryModal');
+
+            const modalHtml = `
+                <div id="unsubmittedStudentsModal" class="modal-overlay">
+                    <div class="stat-modal-content" style="max-width: 480px;">
+                        <div class="stat-modal-header">
+                            <h3>👥 未提交名单</h3>
+                            <span class="close-btn" onclick="closeModal('unsubmittedStudentsModal')">&times;</span>
+                        </div>
+                        <div class="stat-modal-body">
+                            <div style="padding: 16px 24px; background: #fffcf5; border-bottom: 1px solid #fdf6e3; font-size: 14px; color: #856404;">
+                                <strong>作业:</strong> ${assignStat.title}
+                            </div>
+                            <div class="student-list">
+                                ${assignStat.unsubmitted_users && assignStat.unsubmitted_users.length > 0 
+                                    ? assignStat.unsubmitted_users.map(name => `
+                                        <div class="student-tag">
+                                            <i></i>
+                                            ${name}
+                                        </div>
+                                    `).join('')
+                                    : '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">🎉 全部同学均已提交</div>'
+                                }
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary btn-sm" onclick="closeModal('unsubmittedStudentsModal'); showUnsubmittedSummary('${classId}')" style="margin-right: 8px;">返回汇总</button>
+                            <button class="btn btn-sm" onclick="closeModal('unsubmittedStudentsModal')">确定</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.remove();
+        }
+
         // 页面加载后初始化
         loadClasses();
-        if (defaultTab === 'assignments') loadAssignments();
-        if (defaultTab === 'feedback') {
-            loadFeedback();
-            setupTeacherFeedbackButton();
-        }
     </script>
 </body>
 </html>

@@ -28,8 +28,7 @@ func (r *assignmentRepository) GetByID(id string) (*model.Assignment, error) {
 
 func (r *assignmentRepository) GetByTeacherID(teacherID string) ([]model.Assignment, error) {
 	var assignments []model.Assignment
-	// 查询当前教师的作业，以及teacher_id为空的作业（兼容旧数据）
-	err := r.db.Where("teacher_id = ? OR teacher_id = ? OR teacher_id IS NULL", teacherID, "").Order("created_at desc").Find(&assignments).Error
+	err := r.db.Where("teacher_id = ?", teacherID).Order("created_at desc").Find(&assignments).Error
 	return assignments, err
 }
 

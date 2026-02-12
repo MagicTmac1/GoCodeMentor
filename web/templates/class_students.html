@@ -5,112 +5,365 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>班级学生 - GoCodeMentor</title>
     <style>
+        :root {
+            --primary-color: #667eea;
+            --primary-hover: #764ba2;
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --bg-light: #f5f7fa;
+            --text-main: #333;
+            --text-muted: #666;
+            --border-color: #e5e7eb;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--bg-light);
             min-height: 100vh;
+            color: var(--text-main);
         }
+
         .header {
-            background: rgba(255,255,255,0.1);
+            background: var(--primary-gradient);
             color: white;
-            padding: 15px;
+            padding: 24px 0;
             text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .header h1 { font-size: 20px; margin-bottom: 5px; }
-        .header p { font-size: 12px; opacity: 0.9; }
+
+        .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+        .header p { font-size: 15px; opacity: 0.9; }
+
         .container {
-            max-width: 1000px;
-            margin: 20px auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-            min-height: 70vh;
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
         }
-        .content { padding: 20px; }
+
+        .content-wrapper {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            padding: 32px;
+            min-height: 60vh;
+        }
+
+        /* 返回导航 */
+        .top-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding: 4px 0;
+        }
+
+        .back-button {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            padding: 0 20px;
+            height: 40px;
+            border-radius: 30px;
+            background: #f0f2f5;
+            border: none;
+        }
+        
+        .back-button:hover {
+            background: #e4e6e9;
+            color: var(--text-main);
+            transform: translateX(-3px);
+        }
+
         .btn {
-            padding: 10px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 40px;
+            padding: 0 24px;
+            background: var(--primary-gradient);
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-        .btn-secondary { background: #6c757d; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .btn-secondary:hover {
+            background: #f0f4ff;
+            box-shadow: none;
+        }
+
+        .btn-danger {
+            background: white;
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #fff5f5;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.1);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* 班级信息概览 */
+        .class-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .class-name {
+            font-size: 28px;
+            font-weight: 800;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+        }
+
+        .class-code-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background: #f8f9fa;
+            border-radius: 100px;
+            border: 1px solid #eee;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .class-code-value {
+            font-family: 'Fira Code', monospace;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* 学生列表 */
+        .student-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .student-item {
+            background: white;
+            border: 1px solid #f0f0f0;
+            border-radius: 12px;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .student-item:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transform: translateY(-2px);
+        }
+
+        .student-item.selected {
+            background: #f5f7ff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 1px var(--primary-color);
+        }
+
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .student-avatar {
+            width: 52px;
+            height: 52px;
+            background: var(--primary-gradient);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.2);
+        }
+
+        .student-details h4 {
+            font-size: 17px;
+            color: #2d3436;
+            margin-bottom: 4px;
+        }
+
+        .student-details p {
+            font-size: 13px;
+            color: #a0aec0;
+        }
+
+        .student-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn-sm {
+            padding: 8px 16px;
+            font-size: 13px;
+            border-radius: 6px;
+        }
+
+        /* 弹窗样式重写 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 32px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalSlideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>👥 班级学生 - GoCodeMentor</h1>
-        <p>AI驱动的智能教学平台</p>
+        <h1>👥 班级成员管理</h1>
+        <p>管理您的班级学生，查看学习进度</p>
     </div>
 
     <div class="container">
-        <div class="content">
-            <!-- 返回按钮 -->
-            <div style="margin-bottom: 20px;">
-                <a href="/teacher/classes" style="color: #667eea; text-decoration: none; font-size: 14px;">← 返回班级列表</a>
+        <div class="content-wrapper">
+            <div class="top-actions">
+                <a href="/teacher/classes" class="back-button">返回列表</a>
+                <div class="action-bar">
+                    <button onclick="showAddStudentModal()" class="btn">
+                        <span>+</span> 添加学生
+                    </button>
+                    <button id="removeBtn" onclick="removeSelectedStudent()" class="btn btn-danger" disabled>
+                        <span>-</span> 移除学生
+                    </button>
+                </div>
+            </div>
+
+            <div class="class-header">
+                <h2 id="className" class="class-name">加载中...</h2>
+                <div id="classCodeContainer"></div>
             </div>
             
-            <!-- 页面标题 -->
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="font-size: 28px; color: #333; margin-bottom: 10px;">👥 班级学生</h2>
-                <p id="classInfo" style="color: #666;">加载中...</p>
-            </div>
-            
-            <!-- 操作按钮 -->
-            <div style="max-width: 800px; margin: 0 auto 20px; display: flex; gap: 10px; justify-content: flex-end;">
-                <button onclick="showAddStudentModal()" class="btn" style="padding: 8px 16px; font-size: 14px; display: flex; align-items: center; gap: 5px;">
-                    <span style="font-size: 18px;">+</span> 添加学生
-                </button>
-                <button id="removeBtn" onclick="removeSelectedStudent()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 14px; display: flex; align-items: center; gap: 5px;" disabled>
-                    <span style="font-size: 18px;">-</span> 移除学生
-                </button>
-            </div>
-            
-            <!-- 学生列表 -->
-            <div id="studentList" style="max-width: 800px; margin: 0 auto;">
-                <div style="text-align: center; color: #999; padding: 40px;">加载中...</div>
+            <div id="studentList" class="student-list">
+                <div style="text-align: center; color: #a0aec0; padding: 60px;">
+                    <div class="feedback-loading-spinner" style="margin-bottom: 15px;"></div>
+                    <p>正在获取学生列表...</p>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- 添加学生弹窗 -->
-    <div id="addStudentModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 30px; border-radius: 16px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto;">
-            <h3 style="margin-bottom: 20px;">添加学生</h3>
+    <div id="addStudentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h3 style="font-size: 20px; font-weight: 700;">添加学生成员</h3>
+                <span onclick="hideAddStudentModal()" style="cursor: pointer; color: var(--text-muted); font-size: 24px;">&times;</span>
+            </div>
             
             <!-- 单条添加 -->
-            <div style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
-                <label style="display: block; margin-bottom: 8px; color: #333; font-size: 14px;">单个添加</label>
+            <div style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color);">
+                <label style="display: block; margin-bottom: 10px; color: var(--text-main); font-size: 14px; font-weight: 600;">按用户名搜索添加</label>
                 <div style="display: flex; gap: 10px;">
-                    <input type="text" id="studentUsername" placeholder="请输入学生用户名" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
-                    <button onclick="addStudent()" class="btn" style="padding: 8px 20px;">添加</button>
+                    <input type="text" id="studentUsername" placeholder="输入学生账号/用户名">
+                    <button onclick="addStudent()" class="btn">添加</button>
                 </div>
             </div>
             
             <!-- 批量导入 -->
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 8px; color: #333; font-size: 14px;">批量导入（自动创建新用户）</label>
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <p style="font-size: 13px; color: #666; margin-bottom: 5px;">下载模板，填写学生信息后上传</p>
-                    <p style="font-size: 12px; color: #999; margin-bottom: 10px;">提示：学号不存在时会自动创建，初始密码123456</p>
-                    <a href="/api/templates/students" download class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; text-decoration: none; display: inline-block;">📥 下载模板</a>
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; margin-bottom: 10px; color: var(--text-main); font-size: 14px; font-weight: 600;">Excel 批量导入</label>
+                <div style="background: #f8fafc; padding: 16px; border-radius: 10px; margin-bottom: 16px; border: 1px solid #f1f5f9;">
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">
+                        下载标准模板，填写信息后上传。系统会自动为新学生创建账号（初始密码 123456）。
+                    </p>
+                    <a href="/api/templates/students" download class="btn btn-secondary" style="width: 100%; font-size: 13px;">📥 下载学生导入模板</a>
                 </div>
-                <div style="border: 2px dashed #ddd; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('excelFile').click()">
+                
+                <div style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s;" 
+                     onmouseover="this.style.borderColor=var(--primary-color)" 
+                     onmouseout="this.style.borderColor=var(--border-color)"
+                     onclick="document.getElementById('excelFile').click()">
                     <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;" onchange="handleExcelUpload(this)">
-                    <div style="font-size: 32px; margin-bottom: 10px;">📁</div>
-                    <p style="color: #666; font-size: 14px;">点击选择Excel文件</p>
-                    <p style="color: #999; font-size: 12px; margin-top: 5px;">支持 .xlsx, .xls 格式</p>
+                    <div style="font-size: 32px; margin-bottom: 8px;">📁</div>
+                    <p style="color: var(--text-main); font-size: 14px; font-weight: 500;">点击或拖拽 Excel 文件上传</p>
+                    <p style="color: var(--text-muted); font-size: 12px; margin-top: 4px;">支持 .xlsx, .xls 格式</p>
                 </div>
-                <div id="uploadStatus" style="margin-top: 10px; font-size: 13px;"></div>
+                <div id="uploadStatus" style="margin-top: 12px; font-size: 13px;"></div>
             </div>
             
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button onclick="hideAddStudentModal()" class="btn btn-secondary" style="padding: 8px 20px;">关闭</button>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button onclick="hideAddStudentModal()" class="btn btn-secondary">取消</button>
             </div>
         </div>
     </div>
@@ -155,8 +408,12 @@
             }
             
             const classData = await classRes.json();
-            document.getElementById('classInfo').innerHTML = `
-                ${classData.Name || classData.name} | 邀请码: <span style="font-family: monospace; background: #f5f5f5; padding: 2px 8px; border-radius: 4px; color: #667eea; font-weight: bold;">${classData.Code || classData.code}</span>
+            document.getElementById('className').textContent = classData.Name || classData.name;
+            document.getElementById('classCodeContainer').innerHTML = `
+                <div class="class-code-tag">
+                    <span>邀请码:</span>
+                    <span class="class-code-value">${classData.Code || classData.code}</span>
+                </div>
             `;
             
             // 获取学生列表
@@ -180,31 +437,31 @@
             
             if (students.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align: center; padding: 60px 20px; color: #999;">
-                        <div style="font-size: 64px; margin-bottom: 15px;">🎓</div>
-                        <p style="font-size: 16px; color: #666; margin-bottom: 10px;">当前班级暂无学生</p>
-                        <p style="font-size: 14px; margin-bottom: 20px;">请点击上方"+ 添加学生"按钮添加学生</p>
+                    <div style="text-align: center; padding: 60px 20px; color: #a0aec0;">
+                        <div style="font-size: 64px; margin-bottom: 20px;">🎓</div>
+                        <p style="font-size: 18px; color: #666; margin-bottom: 10px;">班级还没有学生</p>
+                        <p style="font-size: 14px;">点击右上角“添加学生”开始邀请</p>
                     </div>
                 `;
                 return;
             }
             
             container.innerHTML = students.map((s, idx) => `
-                <div id="student-${s.ID}" onclick="selectStudent('${s.ID}')" style="background: white; border-radius: 12px; padding: 20px 25px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 2px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s;">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px; font-weight: bold;">
+                <div id="student-${s.ID}" onclick="selectStudent('${s.ID}')" class="student-item">
+                    <div class="student-info">
+                        <div class="student-avatar">
                             ${s.Name ? s.Name.charAt(0) : '?'}
                         </div>
-                        <div>
-                            <h4 style="font-size: 16px; color: #333; margin-bottom: 3px;">${s.Name || '未知'}</h4>
-                            <p style="color: #999; font-size: 12px;">@${s.Username || s.ID}</p>
+                        <div class="student-details">
+                            <h4>${s.Name || '未知'}</h4>
+                            <p>@${s.Username || s.ID}</p>
                         </div>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="event.stopPropagation(); viewStudentAssignments('${s.ID}', '${s.Name || '未知'}')" class="btn" style="padding: 8px 20px; font-size: 13px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                    <div class="student-actions">
+                        <button onclick="event.stopPropagation(); viewStudentAssignments('${s.ID}', '${s.Name || '未知'}')" class="btn btn-secondary action-btn-sm">
                             查看作业
                         </button>
-                        <button onclick="event.stopPropagation(); viewStudentChats('${s.ID}', '${s.Name || '未知'}')" class="btn" style="padding: 8px 20px; font-size: 13px;">
+                        <button onclick="event.stopPropagation(); viewStudentChats('${s.ID}', '${s.Name || '未知'}')" class="btn action-btn-sm">
                             查看答疑
                         </button>
                     </div>
@@ -212,9 +469,9 @@
             `).join('');
         } catch (e) {
             document.getElementById('studentList').innerHTML = `
-                <div style="text-align: center; color: #999; padding: 40px;">
-                    <p>加载失败: ${e.message}</p>
-                    <button onclick="loadClassInfo()" style="margin-top: 15px; padding: 8px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">重试</button>
+                <div style="text-align: center; color: var(--text-muted); padding: 40px;">
+                    <p style="margin-bottom: 16px;">加载失败: ${e.message}</p>
+                    <button onclick="loadClassInfo()" class="btn">重试</button>
                 </div>
             `;
         }
@@ -222,24 +479,21 @@
 
     // 选择学生
     function selectStudent(studentId) {
-        // 取消之前选中的样式
-        if (selectedStudentId) {
-            const prevEl = document.getElementById('student-' + selectedStudentId);
-            if (prevEl) {
-                prevEl.style.border = '2px solid #f0f0f0';
-            }
-        }
-        
         // 如果点击的是已选中的，则取消选择
         if (selectedStudentId === studentId) {
+            const prevEl = document.getElementById('student-' + selectedStudentId);
+            if (prevEl) prevEl.classList.remove('selected');
             selectedStudentId = null;
         } else {
+            // 取消之前选中的样式
+            if (selectedStudentId) {
+                const prevEl = document.getElementById('student-' + selectedStudentId);
+                if (prevEl) prevEl.classList.remove('selected');
+            }
             // 选中新学生
             selectedStudentId = studentId;
             const newEl = document.getElementById('student-' + studentId);
-            if (newEl) {
-                newEl.style.border = '2px solid #667eea';
-            }
+            if (newEl) newEl.classList.add('selected');
         }
         
         updateRemoveButton();
@@ -250,12 +504,8 @@
         const removeBtn = document.getElementById('removeBtn');
         if (selectedStudentId) {
             removeBtn.disabled = false;
-            removeBtn.style.opacity = '1';
-            removeBtn.style.cursor = 'pointer';
         } else {
             removeBtn.disabled = true;
-            removeBtn.style.opacity = '0.5';
-            removeBtn.style.cursor = 'not-allowed';
         }
     }
 
