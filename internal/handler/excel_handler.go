@@ -60,8 +60,8 @@ func (h *ExcelHandler) DownloadClassTemplate(c *gin.Context) {
 // ImportStudentsToClass handles importing students into a class.
 func (h *ExcelHandler) ImportStudentsToClass(c *gin.Context) {
 	classID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	class, err := h.classSvc.GetClassByID(classID)
 	if err != nil {
@@ -136,8 +136,8 @@ func (h *ExcelHandler) ImportStudentsToClass(c *gin.Context) {
 
 // ImportClassesAndStudents handles importing classes and students.
 func (h *ExcelHandler) ImportClassesAndStudents(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "只有教师可以导入班级"})

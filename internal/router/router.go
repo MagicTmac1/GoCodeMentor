@@ -52,64 +52,65 @@ func Setup(
 
 	// API routes
 	api := r.Group("/api")
+	api.Use(authMiddleware)
 	{
 		api.POST("/chat", sessionHandler.Chat)
 		api.GET("/history", sessionHandler.GetHistory)
 		api.GET("/sessions", sessionHandler.GetUserSessions)
 
 		// Class management
-		api.POST("/classes", classHandler.CreateClass)
-		api.GET("/classes", classHandler.GetClassesByTeacherID)
+		api.POST("/classes", teacherAuthMiddleware, classHandler.CreateClass)
+		api.GET("/classes", teacherAuthMiddleware, classHandler.GetClassesByTeacherID)
 		api.GET("/classes/:id", classHandler.GetClassByID)
-		api.GET("/classes/:id/students", classHandler.GetStudentsByClassID)
+		api.GET("/classes/:id/students", teacherAuthMiddleware, classHandler.GetStudentsByClassID)
 		api.POST("/classes/join", classHandler.JoinClass)
-		api.POST("/classes/:id/students", classHandler.AddStudentToClass)
-		api.DELETE("/classes/:id/students/:studentId", classHandler.RemoveStudentFromClass)
-		api.DELETE("/classes/:id", classHandler.DeleteClass)
-		api.GET("/classes/:id/stats", classHandler.GetClassStats)
+		api.POST("/classes/:id/students", teacherAuthMiddleware, classHandler.AddStudentToClass)
+		api.DELETE("/classes/:id/students/:studentId", teacherAuthMiddleware, classHandler.RemoveStudentFromClass)
+		api.DELETE("/classes/:id", teacherAuthMiddleware, classHandler.DeleteClass)
+		api.GET("/classes/:id/stats", teacherAuthMiddleware, classHandler.GetClassStats)
 
 		// User management
 		api.GET("/users/find", userHandler.FindUser)
 
 		// Student data for teachers
-		api.GET("/students/:id/sessions", sessionHandler.GetStudentSessions)
-		api.GET("/students/:id/assignments", assignmentHandler.GetStudentAssignments)
+		api.GET("/students/:id/sessions", teacherAuthMiddleware, sessionHandler.GetStudentSessions)
+		api.GET("/students/:id/assignments", teacherAuthMiddleware, assignmentHandler.GetStudentAssignments)
 
 		// Student's own data
-		api.GET("/my/assignments", assignmentHandler.GetMyAssignments)
+		api.GET("/student/assignments", assignmentHandler.GetMyAssignments)
 
 		// Assignment management
-		api.POST("/assignments/generate", assignmentHandler.GenerateAssignmentByAI)
+		api.POST("/assignments/generate", teacherAuthMiddleware, assignmentHandler.GenerateAssignmentByAI)
 		api.GET("/assignments", assignmentHandler.GetAssignments)
-		api.POST("/assignments/:id/publish", assignmentHandler.PublishAssignment)
+		api.POST("/assignments/:id/publish", teacherAuthMiddleware, assignmentHandler.PublishAssignment)
 		api.GET("/assignments/:id", assignmentHandler.GetAssignmentDetail)
 		api.GET("/assignments/:id/qrcode", assignmentHandler.GetAssignmentQRCode)
 		api.POST("/assignments/:id/submit", assignmentHandler.SubmitAssignment)
 		api.GET("/assignments/:id/student/:studentId", assignmentHandler.GetAssignmentSubmissionForStudent)
 		api.GET("/assignments/:id/published", assignmentHandler.GetPublishedClasses)
-		api.DELETE("/assignments/:id", assignmentHandler.DeleteAssignment)
+		api.DELETE("/assignments/:id", teacherAuthMiddleware, assignmentHandler.DeleteAssignment)
 
 		// Teacher submission management
-		api.PUT("/submissions/:id/score", assignmentHandler.UpdateSubmissionScore)
-		api.PUT("/submissions/:id/feedback", assignmentHandler.UpdateTeacherFeedback)
-		api.POST("/submissions/:id/regrade", assignmentHandler.RegradeSubmission)
-		api.GET("/submissions/:id/download", assignmentHandler.DownloadSubmissionCode)
+		api.PUT("/submissions/:id/score", teacherAuthMiddleware, assignmentHandler.UpdateSubmissionScore)
+		api.PUT("/submissions/:id/feedback", teacherAuthMiddleware, assignmentHandler.UpdateTeacherFeedback)
+		api.POST("/submissions/:id/regrade", teacherAuthMiddleware, assignmentHandler.RegradeSubmission)
+		api.GET("/submissions/:id/download", teacherAuthMiddleware, assignmentHandler.DownloadSubmissionCode)
 
 		// Feedback
 		api.POST("/feedback", feedbackHandler.CreateFeedback)
 		api.GET("/feedback", feedbackHandler.GetFilteredFeedback)
 		api.GET("/feedback/:id", feedbackHandler.GetFeedbackByID)
 		api.POST("/feedback/:id/like", feedbackHandler.LikeFeedback)
-		api.PUT("/feedback/:id/status", feedbackHandler.UpdateFeedbackStatus)
-		api.POST("/feedback/:id/respond", feedbackHandler.RespondFeedback)
-		api.GET("/feedback/stats", feedbackHandler.GetFeedbackStats)
+		api.PUT("/feedback/:id/status", teacherAuthMiddleware, feedbackHandler.UpdateFeedbackStatus)
+		api.POST("/feedback/:id/respond", teacherAuthMiddleware, feedbackHandler.RespondFeedback)
+		api.GET("/feedback/stats", teacherAuthMiddleware, feedbackHandler.GetFeedbackStats)
 		api.GET("/feedback/filter", feedbackHandler.GetFilteredFeedback)
 
 		// Excel templates and imports
-		api.GET("/templates/students", excelHandler.DownloadStudentTemplate)
-		api.GET("/templates/classes", excelHandler.DownloadClassTemplate)
-		api.POST("/classes/:id/students/import", excelHandler.ImportStudentsToClass)
-		api.POST("/classes/import", excelHandler.ImportClassesAndStudents)
+		api.GET("/templates/students", teacherAuthMiddleware, excelHandler.DownloadStudentTemplate)
+		api.GET("/templates/classes", teacherAuthMiddleware, excelHandler.DownloadClassTemplate)
+		api.POST("/classes/:id/students/import", teacherAuthMiddleware, excelHandler.ImportStudentsToClass)
+		api.POST("/classes/import", teacherAuthMiddleware, excelHandler.ImportClassesAndStudents)
 	}
 
 	// Standalone page routes

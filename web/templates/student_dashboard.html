@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生工作台 - GoCodeMentor</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <!-- 公共 CDN -->
+    <script src="https://unpkg.com/marked@12.0.0/lib/marked.umd.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/styles/github.min.css">
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/languages/go.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; }
+        .header .user-info { display: flex; align-items: center; gap: 20px; }
+        .header .user-info span { font-size: 14px; }
+        .header .user-info button {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 20px;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .header .user-info button:hover { background: rgba(255,255,255,0.3); }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .nav-tab {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            color: rgba(255,255,255,0.8);
+        }
+        .nav-tab:hover, .nav-tab.active {
+            background: white;
+            color: #667eea;
+        }
+        
+        .container {
+            max-width: 1400px; /* 增加最大宽度，减少大屏留白 */
+            margin: 20px auto;
+            padding: 0 20px;
+            width: 100%;
+        }
+        
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .section-title h2 { font-size: 24px; color: #333; }
+        
+        /* 作业列表样式 */
+        .assignment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .assignment-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            border-left: 5px solid #dfe6e9;
+        }
+        .assignment-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        .status-graded { border-left-color: #2ecc71; }
+        .status-submitted { border-left-color: #f1c40f; }
+        .status-unsubmitted { border-left-color: #e74c3c; }
+
+        .assignment-card h3 { font-size: 18px; color: #333; margin-bottom: 12px; }
+        .assignment-info { font-size: 14px; color: #666; margin-bottom: 8px; }
+        .assignment-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .score-badge {
+            background: #f8f9fa;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            color: #667eea;
+            border: 1px solid #dee2e6;
+        }
+        .btn-action {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-action:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* AI 答疑区域样式 - Google Gemini 风格复刻 */
+        .chat-container {
+            display: flex;
+            height: calc(100vh - 140px);
+            gap: 16px;
+            background: transparent;
+            border: none;
+            margin-bottom: 0;
+            padding-bottom: 20px;
+        }
+        .chat-sidebar {
+            width: 260px;
+            background: #f0f4f9; /* Gemini 侧边栏浅灰背景 */
+            border: none;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            padding: 12px;
+            /* 移除阴影，保持扁平 */
+            box-shadow: none; 
+        }
+        .sidebar-header {
+            padding: 12px 12px 20px 12px;
+            border: none;
+        }
+        .btn-new-chat {
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 24px; /* 大圆角胶囊 */
+            border: none;
+            background: #dde3ea; /* 稍微深一点的灰色 */
+            color: #444746;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        .btn-new-chat:hover {
+            background: #d1d5db;
+            color: #1f1f1f;
+        }
+        .session-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 4px;
+        }
+        /* 隐藏侧边栏滚动条但保持功能 */
+        .session-list::-webkit-scrollbar { width: 4px; }
+        .session-list::-webkit-scrollbar-thumb { background: transparent; }
+        .session-list:hover::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+        .session-item {
+            padding: 10px 16px;
+            margin-bottom: 4px;
+            border-radius: 100px; /* 胶囊形状 */
+            cursor: pointer;
+            color: #444746;
+            font-size: 14px;
+            transition: all 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: transparent;
+        }
+        .session-item:hover {
+            background: #e0e4e9; /* 悬停浅灰 */
+            color: #1f1f1f;
+        }
+        .session-item.active {
+            background: #d3e3fd; /* Gemini 激活态浅蓝 */
+            color: #001d35; /* 深蓝文字 */
+            font-weight: 500;
+        }
+        .session-item:before {
+            display: none; /* 移除之前的 content */
+        }
+        
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            /* 极简边框或无边框 */
+            border: 1px solid #e5e7eb; 
+        }
+        .chat-history {
+            flex: 1;
+            overflow-y: auto !important;
+            padding: 20px 40px 140px; /* 减少顶部 padding 以对齐侧边栏，减少左右 padding 以利用空间 */
+            scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
+            gap: 32px; /* 消息间距加大 */
+        }
+        
+        /* 气泡样式优化 - Gemini 风格 */
+        .message-row {
+            display: flex;
+            gap: 16px;
+            width: 100%;
+        }
+        .message-row.user {
+            flex-direction: row-reverse;
+        }
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 16px;
+            margin-top: 4px; /* 顶部对齐微调 */
+        }
+        .avatar.ai {
+            background: transparent; /* AI 头像无背景 */
+            color: #000;
+            border: none;
+        }
+        /* 使用 SVG 替换 emoji */
+        .avatar.ai svg {
+            width: 24px;
+            height: 24px;
+            fill: url(#gemini-gradient); 
+        }
+        .avatar.student {
+            background: #c3e7ff; /* 用户头像背景 */
+            color: #001d35;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .chat-message {
+            max-width: 80%;
+            font-size: 16px;
+            line-height: 1.6;
+            position: relative;
+            word-wrap: break-word;
+        }
+        
+        /* 用户消息：灰色气泡 */
+        .message-user {
+            background: #f2f2f2;
+            color: #1f1f1f;
+            padding: 12px 20px;
+            border-radius: 20px;
+        }
+        
+        /* AI 消息：无背景，纯文本 */
+        .message-assistant {
+            background: transparent;
+            color: #1f1f1f;
+            border: none;
+            padding: 0;
+            box-shadow: none;
+        }
+        .message-assistant.markdown-body {
+            background: transparent;
+            padding: 0;
+        }
+
+        /* 悬浮输入框样式 - Gemini 风格 */
+        .chat-input-wrapper {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 800px;
+            background: #f0f4f9; /* 浅灰背景 */
+            border-radius: 36px; /* 大圆角 */
+            box-shadow: none; /* 默认无阴影，聚焦可能有 */
+            border: none;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 8px 8px 24px;
+            transition: all 0.3s;
+        }
+        .chat-input-wrapper:focus-within {
+            background: #fff;
+            box-shadow: 0 0 0 1px #e5e7eb, 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .chat-input-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 14px 0;
+            border: none !important;
+            background: transparent !important;
+            outline: none !important;
+            box-shadow: none !important;
+            font-size: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+            resize: none;
+            line-height: 1.5;
+            color: #1f1f1f;
+        }
+        .btn-send {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: transparent;
+            color: #444746;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .btn-send:hover {
+            background: #e0e4e9;
+            color: #1f1f1f;
+        }
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .btn-send svg { width: 20px; height: 20px; fill: currentColor; }
+
+        /* Markdown 样式微调 */
+        .markdown-body pre {
+            background: #f4f6f8; /* 代码块背景调浅 */
+            border-radius: 12px;
+            border: none;
+        }
+        .chat-history::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-history::-webkit-scrollbar-thumb {
+            background-color: #ddd;
+            border-radius: 10px;
+        }
+        .chat-history::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .chat-message {
+            margin: 15px 0;
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+            position: relative;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-user {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 2px;
+        }
+        .message-assistant {
+            background: white;
+            border: 1px solid #eee;
+            margin-right: auto;
+            border-bottom-left-radius: 2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .message-assistant.markdown-body {
+            padding: 16px 20px;
+        }
+        .thinking {
+            display: flex;
+            gap: 4px;
+            padding: 10px;
+        }
+        .thinking span {
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .thinking span:nth-child(1) { animation-delay: -0.32s; }
+        .thinking span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+        .chat-input-area {
+            padding: 15px 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 12px;
+            background: #fff;
+        }
+        .chat-input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 1px solid #e0e0e0;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: #f9f9f9;
+        }
+        .chat-input:focus {
+            border-color: #667eea;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .btn-send {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+        .btn-send:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .btn-send svg { width: 20px; height: 20px; fill: white; }
+        
+        /* 反馈区域样式 - 复用反馈页面的部分样式 */
+        .feedback-container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 15px; }
+
+        /* Markdown 样式 */
+        .markdown-body pre {
+            background: #f4f4f4;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .markdown-body code { font-family: monospace; font-size: 14px; }
+
+        /* 统一模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+        }
+        .close-modal {
+            position: absolute;
+            top: 20px; right: 20px;
+            font-size: 24px; color: #999;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- 添加 Gemini 渐变 SVG -->
+    <svg style="display: none;">
+        <defs>
+            <linearGradient id="gemini-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#4285f4;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#9b72cb;stop-opacity:1" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <div class="header">
+        <div class="header-content">
+            <h1>🎓 GoCodeMentor 学生工作台</h1>
+            <div class="user-info">
+                <span id="userName">加载中...</span>
+                <button onclick="logout()">退出登录</button>
+            </div>
+        </div>
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="switchTab(this, 'assignments')">📝 我的作业</div>
+            <div class="nav-tab" onclick="switchTab(this, 'chat')">🤖 AI 答疑</div>
+            <div class="nav-tab" onclick="switchTab(this, 'feedback')">💡 意见反馈</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 作业列表 -->
+        <div id="assignmentsSection">
+            <div class="section-title">
+                <h2>我的作业</h2>
+            </div>
+            <div id="assignmentList" class="assignment-grid">
+                <div class="empty-state">
+                    <div class="icon">📝</div>
+                    <p>正在加载作业...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 意见反馈 -->
+        <div id="feedbackSection" style="display: none;">
+            <div class="section-title">
+                <h2>意见反馈</h2>
+                <button class="btn-action" onclick="showFeedbackForm()">+ 发布反馈</button>
+            </div>
+            <div class="feedback-container">
+                <div id="feedbackFormArea" style="display:none; margin-bottom:30px; padding:20px; border:1px solid #eee; border-radius:12px;">
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; margin-bottom:5px;">标题</label>
+                        <input type="text" id="fbTitle" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                    </div>
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; margin-bottom:5px;">类型</label>
+                        <select id="fbType" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                            <option value="bug">🐛 Bug报告</option>
+                            <option value="feature">✨ 功能建议</option>
+                            <option value="suggestion">💡 学习建议</option>
+                            <option value="other">📝 其他</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom:15px;">
+                        <label style="display:block; margin-bottom:5px;">内容</label>
+                        <textarea id="fbContent" style="width:100%; height:100px; padding:10px; border:1px solid #ddd; border-radius:6px;"></textarea>
+                    </div>
+                    <button onclick="submitFeedback()" class="btn-action">提交反馈</button>
+                    <button onclick="hideFeedbackForm()" style="margin-left:10px; background:#6c757d;" class="btn-action">取消</button>
+                </div>
+                <div id="studentFeedbackList">
+                    <!-- 反馈列表 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 答疑 (全宽显示) -->
+    <div id="chatSection" style="display: none; width: 100%; padding: 0 24px;">
+        <div class="chat-container">
+            <div class="chat-sidebar">
+                <div class="sidebar-header">
+                    <button onclick="newChat()" class="btn-new-chat">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        新建对话
+                    </button>
+                </div>
+                <div id="sessionList" class="session-list">
+                    <!-- 会话列表 -->
+                </div>
+            </div>
+            <div class="chat-main">
+                <div id="chatBox" class="chat-history">
+                    <div class="empty-state">
+                        <div class="icon">🤖</div>
+                        <p>你好！我是你的 Go 语言助手。有什么我可以帮你的吗？</p>
+                    </div>
+                </div>
+                <div class="chat-input-wrapper">
+                    <div class="chat-input-container">
+                        <textarea id="chatInput" class="chat-input" placeholder="输入问题，按回车发送..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+                        <button onclick="sendChat()" id="sendBtn" class="btn-send" title="发送">
+                            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 作业详情模态框 -->
+    <div id="assignmentModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化用户信息
+        const userId = localStorage.getItem('user_id');
+        const userName = localStorage.getItem('user_name');
+        const userRole = localStorage.getItem('user_role');
+
+        if (!userId || userRole !== 'student') {
+            window.location.href = '/login';
+        }
+
+        document.getElementById('userName').textContent = userName || '学生';
+
+        // 标签切换
+        function switchTab(el, tab) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+
+            document.getElementById('assignmentsSection').style.display = tab === 'assignments' ? 'block' : 'none';
+            document.getElementById('chatSection').style.display = tab === 'chat' ? 'block' : 'none';
+            document.getElementById('feedbackSection').style.display = tab === 'feedback' ? 'block' : 'none';
+
+            if (tab === 'assignments') loadAssignments();
+            if (tab === 'chat') loadSessions();
+            if (tab === 'feedback') loadFeedbacks();
+        }
+
+        // --- 作业相关 ---
+        async function loadAssignments() {
+            const listEl = document.getElementById('assignmentList');
+            try {
+                const res = await fetch(`/api/student/assignments`);
+                const data = await res.json();
+                
+                if (!data.assignments || data.assignments.length === 0) {
+                    listEl.innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>暂无作业</p></div>';
+                    return;
+                }
+
+                listEl.innerHTML = data.assignments.map(item => {
+                    const assign = item.assignment || item.Assignment || item;
+                    const sub = item.submission || item.Submission || {};
+                    const statusText = item.status || '未提交';
+                    let statusClass = 'unsubmitted';
+                    if (statusText === '已查看') statusClass = 'graded';
+                    else if (statusText === '已提交') statusClass = 'submitted';
+                    
+                    const score = sub.total_score !== undefined ? sub.total_score : (sub.TotalScore !== undefined ? sub.TotalScore : '--');
+                    
+                    return `
+                        <div class="assignment-card status-${statusClass}">
+                            <h3>${assign.Title || '未命名作业'}</h3>
+                            <div class="assignment-info">截止时间: ${assign.Deadline ? new Date(assign.Deadline).toLocaleString() : '无'}</div>
+                            <div class="assignment-info">状态: ${statusText}</div>
+                            <div class="assignment-stats">
+                                <span class="score-badge">得分: ${score}</span>
+                                ${statusClass === 'unsubmitted' 
+                                    ? `<a href="/assignments/do?id=${assign.ID}" class="btn-action">去完成</a>`
+                                    : `<button onclick="viewAssignmentDetail('${assign.ID}')" class="btn-action">查看详情</button>`
+                                }
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                listEl.innerHTML = '<p style="color:red; text-align:center;">加载作业失败</p>';
+            }
+        }
+
+        async function viewAssignmentDetail(id) {
+            const modal = document.getElementById('assignmentModal');
+            const body = document.getElementById('modalBody');
+            modal.style.display = 'flex';
+            body.innerHTML = '<p>正在加载详情...</p>';
+
+            try {
+                const res = await fetch(`/api/assignments/${id}/student/${userId}`);
+                const data = await res.json();
+                const sub = data.submission || data.Submission || {};
+                
+                let html = `
+                    <h2 style="margin-bottom:20px;">${data.assignment.Title}</h2>
+                    <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px;">
+                        <p><strong>状态:</strong> ${sub.status === 'graded' ? '✅ 已批改' : '📤 已提交'}</p>
+                        <p><strong>得分:</strong> ${sub.total_score || '--'}</p>
+                        ${sub.ai_feedback ? `<div style="margin-top:15px; padding:15px; background:#e8f5e9; border-radius:8px;">
+                            <strong>🤖 AI 评语:</strong><br>${sub.ai_feedback}
+                        </div>` : ''}
+                    </div>
+                `;
+
+                if (data.questions && data.questions.length > 0) {
+                    html += '<h3>答题详情</h3>';
+                    data.questions.forEach((q, idx) => {
+                        const studentAns = sub.answers ? sub.answers[q.ID] : '未作答';
+                        html += `
+                            <div style="margin:15px 0; padding:15px; border:1px solid #eee; border-radius:8px;">
+                                <p><strong>Q${idx+1}: ${q.Content}</strong></p>
+                                <div style="margin-top:10px; color:#666;">你的回答: ${studentAns}</div>
+                                <div style="margin-top:5px; color:#2ecc71;">标准答案: ${q.Answer || '无'}</div>
+                            </div>
+                        `;
+                    });
+                } else if (sub.code) {
+                    html += `<h3>提交的代码</h3><pre style="background:#2d3436; color:white; padding:15px; border-radius:8px; overflow:auto;"><code>${sub.code}</code></pre>`;
+                }
+
+                body.innerHTML = html;
+                body.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+            } catch (e) {
+                body.innerHTML = '<p style="color:red;">加载详情失败</p>';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('assignmentModal').style.display = 'none';
+        }
+
+        // --- AI 答疑相关 ---
+        let currentSessionId = '';
+
+        // 自动调整输入框高度
+        function handleKeyDown(e) {
+            const input = document.getElementById('chatInput');
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChat();
+            }
+            // 延迟一丁点时间让内容更新后再调整高度
+            setTimeout(() => {
+                input.style.height = 'auto';
+                input.style.height = (input.scrollHeight) + 'px';
+            }, 0);
+        }
+
+        async function loadSessions() {
+            const listEl = document.getElementById('sessionList');
+            try {
+                const res = await fetch('/api/sessions');
+                const sessions = await res.json();
+                
+                if (sessions.length === 0) {
+                    listEl.innerHTML = '<div style="text-align:center; color:#999; margin-top:20px; font-size:13px;">暂无历史对话</div>';
+                    return;
+                }
+
+                listEl.innerHTML = sessions.map(s => `
+                    <div class="session-item ${currentSessionId === s.ID ? 'active' : ''}" 
+                         onclick="switchSession('${s.ID}')" 
+                         title="${s.Title || '新对话'}">
+                        <span style="font-size: 16px;">💬</span>
+                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis;">${s.Title || '新对话'}</span>
+                    </div>
+                `).join('');
+            } catch (e) {}
+        }
+
+        function newChat() {
+            currentSessionId = '';
+            document.getElementById('chatBox').innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">🤖</div>
+                    <p>你好！我是你的 Go 语言助手。有什么我可以帮你的吗？</p>
+                </div>
+            `;
+            loadSessions();
+            const input = document.getElementById('chatInput');
+            input.value = '';
+            input.style.height = 'auto';
+            input.focus();
+        }
+
+        async function switchSession(sessionId) {
+            currentSessionId = sessionId;
+            loadSessions();
+            
+            const box = document.getElementById('chatBox');
+            box.innerHTML = '<div class="empty-state">加载中...</div>';
+            
+            try {
+                const res = await fetch(`/api/history?session_id=${sessionId}`);
+                const messages = await res.json();
+                box.innerHTML = '';
+                
+                if (!messages || messages.length === 0) {
+                    box.innerHTML = '<div class="empty-state"><div class="icon">🤖</div><p>该对话暂无消息</p></div>';
+                } else {
+                    messages.forEach(msg => {
+                        const content = msg.Content || msg.content;
+                        const role = msg.Role || msg.role;
+                        if (content && content.includes('你是一位专业的 Go 语言助教')) return;
+                        appendMessage(role === 'user' ? 'user' : 'assistant', content);
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to load messages:', e);
+                box.innerHTML = '<div class="empty-state">加载失败</div>';
+            }
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chatInput');
+            const btn = document.getElementById('sendBtn');
+            const content = input.value.trim();
+            if (!content) return;
+
+            // 禁用输入
+            input.disabled = true;
+            btn.disabled = true;
+
+            appendMessage('user', content);
+            input.value = '';
+            input.style.height = 'auto';
+
+            // 显示思考状态
+            const chatBox = document.getElementById('chatBox');
+            const thinkingRow = document.createElement('div');
+            thinkingRow.className = 'message-row assistant';
+            thinkingRow.id = 'ai-thinking';
+            thinkingRow.innerHTML = `
+                <div class="avatar ai">🤖</div>
+                <div class="chat-message message-assistant thinking">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            chatBox.appendChild(thinkingRow);
+            chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: currentSessionId, question: content})
+                });
+                
+                const loader = document.getElementById('ai-thinking');
+                if (loader) loader.remove();
+
+                const data = await res.json();
+                if (data.answer) {
+                    appendMessage('assistant', data.answer);
+                    if (!currentSessionId) {
+                        currentSessionId = data.session_id;
+                        loadSessions();
+                    }
+                }
+            } catch (e) {
+                const loader = document.getElementById('ai-thinking');
+                if (loader) loader.remove();
+                appendMessage('assistant', '抱歉，系统暂时出了点问题，请稍后再试。');
+            } finally {
+                input.disabled = false;
+                btn.disabled = false;
+                input.focus();
+            }
+        }
+
+        function appendMessage(role, content) {
+            const box = document.getElementById('chatBox');
+            
+            // 移除可能存在的空状态
+            const emptyState = box.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            const row = document.createElement('div');
+            row.className = `message-row ${role}`;
+            
+            // Gemini 风格图标
+            const avatarHtml = role === 'user' 
+                ? '<div class="avatar student">我</div>' 
+                : `<div class="avatar ai">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12,2 L14.5,9.5 L22,12 L14.5,14.5 L12,22 L9.5,14.5 L2,12 L9.5,9.5 L12,2 Z" fill="url(#gemini-gradient)"></path>
+                    </svg>
+                   </div>`;
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${role === 'user' ? 'message-user' : 'message-assistant'}`;
+            
+            if (role === 'user') {
+                messageDiv.textContent = content;
+            } else {
+                messageDiv.classList.add('markdown-body');
+                try {
+                    const renderer = window.marked && (window.marked.parse || window.marked);
+                    if (typeof renderer === 'function') {
+                        messageDiv.innerHTML = renderer(content);
+                    } else {
+                        messageDiv.style.whiteSpace = 'pre-wrap';
+                        messageDiv.textContent = content;
+                    }
+                } catch (e) {
+                    messageDiv.style.whiteSpace = 'pre-wrap';
+                    messageDiv.textContent = content;
+                }
+                messageDiv.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+            }
+            
+            row.innerHTML = avatarHtml;
+            row.appendChild(messageDiv);
+            box.appendChild(row);
+            
+            setTimeout(() => {
+                box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+            }, 50);
+        }
+
+        // --- 反馈相关 ---
+        function showFeedbackForm() { document.getElementById('feedbackFormArea').style.display = 'block'; }
+        function hideFeedbackForm() { document.getElementById('feedbackFormArea').style.display = 'none'; }
+
+        async function submitFeedback() {
+            const title = document.getElementById('fbTitle').value;
+            const content = document.getElementById('fbContent').value;
+            const type = document.getElementById('fbType').value;
+
+            if (!title || !content) return alert('请填写标题和内容');
+
+            try {
+                const res = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({title, content, type, anonymous_id: userId})
+                });
+                if (res.ok) {
+                    alert('反馈提交成功');
+                    hideFeedbackForm();
+                    loadFeedbacks();
+                }
+            } catch (e) { alert('提交失败'); }
+        }
+
+        async function loadFeedbacks() {
+            const listEl = document.getElementById('studentFeedbackList');
+            try {
+                const res = await fetch('/api/feedback');
+                const data = await res.json();
+                const myFeedbacks = data.filter(f => f.AnonymousID === userId);
+                
+                if (myFeedbacks.length === 0) {
+                    listEl.innerHTML = '<div class="empty-state"><p>你还没有提交过反馈</p></div>';
+                    return;
+                }
+
+                listEl.innerHTML = myFeedbacks.map(f => `
+                    <div style="padding:15px; border:1px solid #eee; border-radius:10px; margin-bottom:15px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <strong>${f.Title}</strong>
+                            <span style="font-size:12px; color:#999;">${new Date(f.CreatedAt).toLocaleDateString()}</span>
+                        </div>
+                        <p style="font-size:14px; color:#666;">${f.Content}</p>
+                        ${f.TeacherResponse ? `
+                            <div style="margin-top:10px; padding:10px; background:#fff9db; border-radius:6px; font-size:13px;">
+                                <strong>👩‍🏫 教师回复:</strong> ${f.TeacherResponse}
+                            </div>
+                        ` : '<div style="margin-top:10px; font-size:12px; color:#999;">⌛ 等待教师回复...</div>'}
+                    </div>
+                `).join('');
+            } catch (e) {}
+        }
+
+        function logout() {
+            document.cookie = "user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+
+        // 默认加载作业
+        window.onload = loadAssignments;
+    </script>
+</body>
+</html>

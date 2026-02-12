@@ -30,9 +30,9 @@ func (h *FeedbackHandler) CreateFeedback(c *gin.Context) {
 		return
 	}
 
-	// 从请求头获取用户信息
-	userID := c.GetHeader("X-User-ID")
-	
+	// 从上下文获取用户信息
+	userID := c.GetString("userID")
+
 	feedback, err := h.feedbackSvc.Create(req.Type, req.Title, req.Content, userID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -74,7 +74,7 @@ func (h *FeedbackHandler) LikeFeedback(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "无效的反馈ID"})
 		return
 	}
-	
+
 	if err := h.feedbackSvc.Like(uint(id)); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -98,9 +98,9 @@ func (h *FeedbackHandler) UpdateFeedbackStatus(c *gin.Context) {
 		return
 	}
 
-	// 从请求头获取教师ID (UUID字符串)
-	teacherID := c.GetHeader("X-User-ID")
-	
+	// 从上下文获取教师ID (UUID字符串)
+	teacherID := c.GetString("userID")
+
 	if err := h.feedbackSvc.UpdateStatus(uint(id), req.Status, teacherID); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -124,9 +124,9 @@ func (h *FeedbackHandler) RespondFeedback(c *gin.Context) {
 		return
 	}
 
-	// 从请求头获取教师ID (UUID字符串)
-	teacherID := c.GetHeader("X-User-ID")
-	
+	// 从上下文获取教师ID (UUID字符串)
+	teacherID := c.GetString("userID")
+
 	if err := h.feedbackSvc.Respond(uint(id), req.Response, teacherID); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

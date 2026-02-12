@@ -21,18 +21,14 @@ func (h *PageHandler) LoginPage(c *gin.Context) {
 
 // IndexPage renders the index page, redirecting based on role.
 func (h *PageHandler) IndexPage(c *gin.Context) {
-	userRole, _ := c.Cookie("user_role")
-	if userRole == "" {
-		userRole = c.GetHeader("X-User-Role")
-	}
+	userRole := c.GetString("userRole")
 
 	if userRole == "teacher" {
 		c.File("web/templates/teacher_dashboard.html")
+	} else if userRole == "student" {
+		c.File("web/templates/student_dashboard.html")
 	} else {
-		c.HTML(http.StatusOK, "chat.html", gin.H{
-			"Title": "课堂答疑",
-			"Nav":   "chat",
-		})
+		c.Redirect(http.StatusFound, "/login")
 	}
 }
 

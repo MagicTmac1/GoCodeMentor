@@ -351,8 +351,8 @@
                 </div>
                 
                 <div style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s;" 
-                     onmouseover="this.style.borderColor=var(--primary-color)" 
-                     onmouseout="this.style.borderColor=var(--border-color)"
+                     onmouseover="this.style.borderColor='var(--primary-color)'" 
+                     onmouseout="this.style.borderColor='var(--border-color)'"
                      onclick="document.getElementById('excelFile').click()">
                     <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;" onchange="handleExcelUpload(this)">
                     <div style="font-size: 32px; margin-bottom: 8px;">📁</div>
@@ -588,34 +588,87 @@
                 }
             });
             
-            if (!res.ok) {
-                alert('未找到该学生，请确认用户名正确');
+            if (res.status === 404) {
+                // 学生不存在，询问是否注册
+                if (confirm(`未找到账号 "${username}"。\n\n是否立即为该学生创建新账号？\n(默认密码: 123456)`)) {
+                    await registerAndAddStudent(username);
+                }
                 return;
+            }
+            
+            if (!res.ok) {
+                let errMsg = '查找失败';
+                try {
+                    const errData = await res.json();
+                    errMsg = errData.error || res.statusText;
+                } catch (e) {
+                    errMsg = res.statusText;
+                }
+                throw new Error(errMsg);
             }
             
             const student = await res.json();
             
             // 将学生添加到班级
-            const addRes = await fetch('/api/classes/' + classId + '/students', {
+            await addStudentToClass(student.ID);
+            
+        } catch (e) {
+            console.error(e);
+            alert('操作失败: ' + e.message);
+        }
+    }
+
+    // 注册并添加学生
+    async function registerAndAddStudent(username) {
+        try {
+            // 1. 注册
+            const regRes = await fetch('/api/register', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-User-ID': userId,
-                    'X-User-Role': userRole
-                },
-                body: JSON.stringify({ student_id: student.ID })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: username,
+                    password: '123456',
+                    name: username,
+                    role: 'student'
+                })
             });
             
-            if (addRes.ok) {
-                alert('添加成功！');
-                hideAddStudentModal();
-                loadClassInfo();
-            } else {
-                const err = await addRes.json();
-                alert('添加失败: ' + (err.error || '未知错误'));
+            if (!regRes.ok) {
+                const err = await regRes.json();
+                throw new Error('注册失败: ' + (err.error || '未知错误'));
             }
+            
+            const newUser = await regRes.json();
+            
+            // 2. 添加到班级
+            // Register接口返回的是小写id，FindUser返回的是大写ID，做兼容
+            await addStudentToClass(newUser.id || newUser.ID);
+            
         } catch (e) {
-            alert('网络错误: ' + e.message);
+            console.error(e);
+            alert(e.message);
+        }
+    }
+    
+    // 添加到班级逻辑
+    async function addStudentToClass(studentId) {
+        const addRes = await fetch('/api/classes/' + classId + '/students', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-User-ID': userId,
+                'X-User-Role': userRole
+            },
+            body: JSON.stringify({ student_id: studentId })
+        });
+        
+        if (addRes.ok) {
+            alert('添加成功！');
+            hideAddStudentModal();
+            loadClassInfo();
+        } else {
+            const err = await addRes.json();
+            throw new Error('添加到班级失败: ' + (err.error || '未知错误'));
         }
     }
 

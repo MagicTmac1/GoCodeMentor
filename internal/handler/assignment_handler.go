@@ -23,8 +23,8 @@ func NewAssignmentHandler(assignSvc service.IAssignmentService, userSvc service.
 
 // GenerateAssignmentByAI handles the generation of an assignment by AI.
 func (h *AssignmentHandler) GenerateAssignmentByAI(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "只有教师可以生成作业"})
@@ -52,8 +52,8 @@ func (h *AssignmentHandler) GenerateAssignmentByAI(c *gin.Context) {
 
 // GetAssignments handles getting a list of assignments.
 func (h *AssignmentHandler) GetAssignments(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userRole == "teacher" {
 		assignments, err := h.assignSvc.GetAssignmentList(userID)
@@ -84,8 +84,8 @@ func (h *AssignmentHandler) GetAssignments(c *gin.Context) {
 // PublishAssignment handles publishing an assignment to a class.
 func (h *AssignmentHandler) PublishAssignment(c *gin.Context) {
 	assignID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "只有教师可以发布作业"})
@@ -179,8 +179,15 @@ func (h *AssignmentHandler) GetAssignmentQRCode(c *gin.Context) {
 // SubmitAssignment handles a student submitting an assignment.
 func (h *AssignmentHandler) SubmitAssignment(c *gin.Context) {
 	assignID := c.Param("id")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
+
+	if userID == "" || userRole != "student" {
+		c.JSON(403, gin.H{"error": "只有学生可以提交作业"})
+		return
+	}
+
 	var req struct {
-		StudentID   string                 `json:"student_id"`
 		StudentName string                 `json:"student_name"`
 		Answers     map[string]interface{} `json:"answers"`
 		Code        string                 `json:"code"`
@@ -215,7 +222,7 @@ func (h *AssignmentHandler) SubmitAssignment(c *gin.Context) {
 		}
 	}
 
-	submissionID, err := h.assignSvc.SubmitAssignment(assignID, req.StudentID, req.StudentName, answers, req.Code)
+	submissionID, err := h.assignSvc.SubmitAssignment(assignID, userID, req.StudentName, answers, req.Code)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -227,11 +234,11 @@ func (h *AssignmentHandler) SubmitAssignment(c *gin.Context) {
 // GetStudentAssignments handles getting all assignments for a specific student (teacher view).
 func (h *AssignmentHandler) GetStudentAssignments(c *gin.Context) {
 	studentID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
-		c.JSON(403, gin.H{"error": "无权查看"})
+		c.JSON(403, gin.H{"error": "只有教师可以查看学生作业"})
 		return
 	}
 
@@ -299,8 +306,8 @@ func (h *AssignmentHandler) GetStudentAssignments(c *gin.Context) {
 
 // GetMyAssignments handles a student getting their own assignments.
 func (h *AssignmentHandler) GetMyAssignments(c *gin.Context) {
-	studentID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	studentID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if studentID == "" || userRole != "student" {
 		c.JSON(403, gin.H{"error": "无权查看"})
@@ -373,8 +380,8 @@ func (h *AssignmentHandler) GetMyAssignments(c *gin.Context) {
 func (h *AssignmentHandler) GetAssignmentSubmissionForStudent(c *gin.Context) {
 	assignID := c.Param("id")
 	studentID := c.Param("studentId")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "无权查看"})
@@ -422,8 +429,8 @@ func (h *AssignmentHandler) GetAssignmentSubmissionForStudent(c *gin.Context) {
 // UpdateSubmissionScore handles updating a submission score manually by teacher.
 func (h *AssignmentHandler) UpdateSubmissionScore(c *gin.Context) {
 	submissionID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "只有教师可以修改分数"})
@@ -455,8 +462,8 @@ func (h *AssignmentHandler) UpdateSubmissionScore(c *gin.Context) {
 // UpdateTeacherFeedback handles updating teacher feedback for a submission.
 func (h *AssignmentHandler) UpdateTeacherFeedback(c *gin.Context) {
 	submissionID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "只有教师可以添加批注"})
@@ -483,8 +490,8 @@ func (h *AssignmentHandler) UpdateTeacherFeedback(c *gin.Context) {
 // RegradeSubmission handles triggering AI regrading for a submission.
 func (h *AssignmentHandler) RegradeSubmission(c *gin.Context) {
 	submissionID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "只有教师可以重新批改"})
@@ -503,8 +510,8 @@ func (h *AssignmentHandler) RegradeSubmission(c *gin.Context) {
 // GetPublishedClasses handles getting the list of classes an assignment is published to.
 func (h *AssignmentHandler) GetPublishedClasses(c *gin.Context) {
 	assignID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "只有教师可以查看发布信息"})
@@ -535,8 +542,8 @@ func (h *AssignmentHandler) GetPublishedClasses(c *gin.Context) {
 // DownloadSubmissionCode handles downloading student's code as a file.
 func (h *AssignmentHandler) DownloadSubmissionCode(c *gin.Context) {
 	submissionID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "只有教师可以下载代码"})
@@ -557,8 +564,8 @@ func (h *AssignmentHandler) DownloadSubmissionCode(c *gin.Context) {
 // DeleteAssignment handles deleting an assignment and all related data.
 func (h *AssignmentHandler) DeleteAssignment(c *gin.Context) {
 	assignID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "只有教师可以删除作业"})

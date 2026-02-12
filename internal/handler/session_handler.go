@@ -28,7 +28,7 @@ func (h *SessionHandler) Chat(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetHeader("X-User-ID")
+	userID := c.GetString("userID")
 	if userID == "" {
 		userID = "anonymous" // 未登录用户使用匿名
 	}
@@ -54,7 +54,7 @@ func (h *SessionHandler) GetHistory(c *gin.Context) {
 		return
 	}
 
-	userID := c.GetHeader("X-User-ID")
+	userID := c.GetString("userID")
 	if userID == "" {
 		userID = "anonymous"
 	}
@@ -69,7 +69,7 @@ func (h *SessionHandler) GetHistory(c *gin.Context) {
 
 // GetUserSessions handles getting all sessions for a user.
 func (h *SessionHandler) GetUserSessions(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
+	userID := c.GetString("userID")
 	if userID == "" {
 		c.JSON(401, gin.H{"error": "未登录"})
 		return
@@ -86,8 +86,8 @@ func (h *SessionHandler) GetUserSessions(c *gin.Context) {
 // GetStudentSessions handles a teacher getting a student's sessions.
 func (h *SessionHandler) GetStudentSessions(c *gin.Context) {
 	studentID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "无权查看"})

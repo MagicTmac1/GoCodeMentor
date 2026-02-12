@@ -32,8 +32,15 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// 获取角色信息
+		userRole, _ := c.Cookie("user_role")
+		if userRole == "" {
+			userRole = c.GetHeader("X-User-Role")
+		}
+
 		// 将用户信息存入上下文，方便后续使用
 		c.Set("userID", userID)
+		c.Set("userRole", userRole)
 		c.Next()
 	}
 }
@@ -41,10 +48,14 @@ func AuthMiddleware() gin.HandlerFunc {
 // TeacherAuthMiddleware 教师权限验证中间件
 func TeacherAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 优先从Cookie获取
-		userRole, _ := c.Cookie("user_role")
+		// 先尝试从上下文获取（如果 AuthMiddleware 已经运行）
+		userRole := c.GetString("userRole")
 		if userRole == "" {
-			userRole = c.GetHeader("X-User-Role")
+			// 否则从Cookie/Header获取
+			userRole, _ = c.Cookie("user_role")
+			if userRole == "" {
+				userRole = c.GetHeader("X-User-Role")
+			}
 		}
 
 		if userRole != "teacher" {

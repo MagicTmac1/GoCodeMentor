@@ -20,8 +20,8 @@ func NewClassHandler(classSvc service.IClassService, userSvc service.IUserServic
 
 // CreateClass handles the creation of a new class.
 func (h *ClassHandler) CreateClass(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "只有教师可以创建班级"})
@@ -47,8 +47,8 @@ func (h *ClassHandler) CreateClass(c *gin.Context) {
 
 // GetClassesByTeacherID handles getting all classes for a teacher.
 func (h *ClassHandler) GetClassesByTeacherID(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "teacher" {
 		c.JSON(403, gin.H{"error": "无权访问"})
@@ -77,8 +77,8 @@ func (h *ClassHandler) GetClassByID(c *gin.Context) {
 // GetStudentsByClassID handles getting all students in a class.
 func (h *ClassHandler) GetStudentsByClassID(c *gin.Context) {
 	classID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	class, err := h.classSvc.GetClassByID(classID)
 	if err != nil {
@@ -101,8 +101,8 @@ func (h *ClassHandler) GetStudentsByClassID(c *gin.Context) {
 
 // JoinClass handles a student joining a class.
 func (h *ClassHandler) JoinClass(c *gin.Context) {
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	if userID == "" || userRole != "student" {
 		c.JSON(403, gin.H{"error": "只有学生可以加入班级"})
@@ -129,8 +129,8 @@ func (h *ClassHandler) JoinClass(c *gin.Context) {
 // AddStudentToClass handles a teacher adding a student to a class.
 func (h *ClassHandler) AddStudentToClass(c *gin.Context) {
 	classID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	class, err := h.classSvc.GetClassByID(classID)
 	if err != nil {
@@ -169,8 +169,8 @@ func (h *ClassHandler) AddStudentToClass(c *gin.Context) {
 func (h *ClassHandler) RemoveStudentFromClass(c *gin.Context) {
 	classID := c.Param("id")
 	studentID := c.Param("studentId")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	class, err := h.classSvc.GetClassByID(classID)
 	if err != nil {
@@ -194,8 +194,8 @@ func (h *ClassHandler) RemoveStudentFromClass(c *gin.Context) {
 // DeleteClass handles deleting a class.
 func (h *ClassHandler) DeleteClass(c *gin.Context) {
 	classID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	class, err := h.classSvc.GetClassByID(classID)
 	if err != nil {
@@ -219,8 +219,8 @@ func (h *ClassHandler) DeleteClass(c *gin.Context) {
 // GetClassStats handles getting statistics for a class.
 func (h *ClassHandler) GetClassStats(c *gin.Context) {
 	classID := c.Param("id")
-	userID := c.GetHeader("X-User-ID")
-	userRole := c.GetHeader("X-User-Role")
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
 
 	class, err := h.classSvc.GetClassByID(classID)
 	if err != nil {
