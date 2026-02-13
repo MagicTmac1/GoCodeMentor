@@ -624,9 +624,9 @@
 <script>
     // 设置当前用户信息（从后端模板变量注入）
     (function() {
-        const userId = "{{.User.ID}}" || localStorage.getItem('user_id') || '';
-        const userRole = "{{.User.Role}}" || localStorage.getItem('user_role') || 'student';
-        const userName = "{{.User.Name}}" || localStorage.getItem('user_name') || '';
+        const userId = "{{.User.ID}}" || sessionStorage.getItem('user_id') || '';
+        const userRole = "{{.User.Role}}" || sessionStorage.getItem('user_role') || 'student';
+        const userName = "{{.User.Name}}" || sessionStorage.getItem('user_name') || '';
         
         // 更新全局状态中的用户信息
         if (window.FeedbackState) {
@@ -636,10 +636,10 @@
                 name: userName
             };
             
-            // 保存到localStorage
-            if (userId) localStorage.setItem('user_id', userId);
-            if (userRole) localStorage.setItem('user_role', userRole);
-            if (userName) localStorage.setItem('user_name', userName);
+            // 确保同步到 sessionStorage
+            if (userId) sessionStorage.setItem('user_id', userId);
+            if (userRole) sessionStorage.setItem('user_role', userRole);
+            if (userName) sessionStorage.setItem('user_name', userName);
         }
         
         // 初始化控制器

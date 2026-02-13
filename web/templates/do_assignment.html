@@ -153,9 +153,9 @@
                     html += `<textarea id="code_answer" rows="10" placeholder="编程题：在此输入完整代码..." ${isExpired ? 'disabled' : ''}></textarea>`;
                 }
                 
-                // 获取学生信息（从localStorage或cookie）
-                const userId = getCookie('user_id') || localStorage.getItem('user_id');
-                const userName = getCookie('user_name') || localStorage.getItem('user_name');
+                // 获取学生信息（从sessionStorage或cookie）
+                const userId = getCookie('user_id') || sessionStorage.getItem('user_id');
+                const userName = getCookie('user_name') || sessionStorage.getItem('user_name');
                 
                 html += `
                     <div style="margin-top: 20px;">
@@ -213,7 +213,7 @@
             
             try {
                 // 获取学生ID
-                const studentId = getCookie('user_id') || localStorage.getItem('user_id') || 'stu_' + Date.now();
+                const studentId = getCookie('user_id') || sessionStorage.getItem('user_id') || 'stu_' + Date.now();
                 
                 const res = await fetch(`/api/assignments/${assignId}/submit`, {
                     method: 'POST',

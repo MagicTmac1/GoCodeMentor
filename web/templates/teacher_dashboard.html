@@ -794,6 +794,7 @@
             <div class="nav-tab active" onclick="switchTab('classes')">📚 我的班级</div>
             <div class="nav-tab" onclick="switchTab('assignments')">📝 作业库</div>
             <div class="nav-tab" onclick="switchTab('feedback')">💡 意见反馈</div>
+            <div id="adminTab" class="nav-tab" onclick="location.href='/admin/accounts'" style="display: none;">🔐 账号管理</div>
         </div>
     </div>
 
@@ -898,7 +899,7 @@
                     <div class="stat-label">已解决</div>
                     <div id="resolved-feedbacks" class="stat-value" style="color: #67c23a;">0</div>
                 </div>
-                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({search: localStorage.getItem('user_id')})">
+                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({search: sessionStorage.getItem('user_id')})">
                     <div class="stat-label">我的反馈</div>
                     <div id="my-feedbacks" class="stat-value" style="color: #409eff;">0</div>
                 </div>
@@ -1052,9 +1053,9 @@
     
     <script>
         // 获取用户信息
-        const userId = localStorage.getItem('user_id');
-        const userName = localStorage.getItem('user_name');
-        const userRole = localStorage.getItem('user_role');
+        const userId = sessionStorage.getItem('user_id');
+        const userName = sessionStorage.getItem('user_name');
+        const userRole = sessionStorage.getItem('user_role');
 
         // 设置 FeedbackState 用户信息
         if (window.FeedbackState) {
@@ -1064,16 +1065,36 @@
         }
 
         // 检查登录状态
-        if (!userId || userRole !== 'teacher') {
+        if (!userId || (userRole !== 'teacher' && userRole !== 'admin')) {
             window.location.href = '/login';
+            throw new Error('Redirecting to login...'); // 停止后续脚本执行
+        }
+
+        // 管理员权限特殊处理
+        if (userRole === 'admin') {
+            document.getElementById('adminTab').style.display = 'block';
+            // 管理员只显示反馈和账号管理，隐藏班级和作业库
+            document.querySelectorAll('.nav-tab').forEach((t, index) => {
+                if (index === 0 || index === 1) { // 班级和作业库
+                    t.style.display = 'none';
+                }
+            });
+            // 如果当前在隐藏的标签页，自动切换到反馈页
+            const currentTab = new URLSearchParams(window.location.search).get('tab') || 'classes';
+            if (currentTab === 'classes' || currentTab === 'assignments') {
+                setTimeout(() => switchTab('feedback'), 100);
+            }
         }
 
         // 显示用户名
         document.getElementById('userName').textContent = userName || '教师';
 
         function logout() {
+            sessionStorage.clear();
             localStorage.clear();
+            document.cookie = "user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             document.cookie = "user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.cookie = "user_name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             window.location.href = '/login';
         }
 
@@ -1487,7 +1508,13 @@
         }
         
         const urlParams = new URLSearchParams(window.location.search);
-        const defaultTab = urlParams.get('tab') || 'classes';
+        let defaultTab = urlParams.get('tab') || 'classes';
+        
+        // 管理员默认进入反馈页
+        if (userRole === 'admin' && (defaultTab === 'classes' || defaultTab === 'assignments')) {
+            defaultTab = 'feedback';
+        }
+
         if (defaultTab !== 'classes') {
             switchTab(defaultTab);
         }
@@ -1738,7 +1765,9 @@
         }
 
         // 页面加载后初始化
-        loadClasses();
+        if (userRole !== 'admin') {
+            loadClasses();
+        }
     </script>
 </body>
 </html>

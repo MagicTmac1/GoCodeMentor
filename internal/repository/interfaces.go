@@ -10,6 +10,7 @@ type UserRepository interface {
 	GetByUsername(username string) (*model.User, error)
 	GetByID(id string) (*model.User, error)
 	GetByClassID(classID string) ([]model.User, error)
+	GetAll() ([]model.User, error)
 	Update(user *model.User) error
 	Delete(user *model.User) error
 }
@@ -82,4 +83,5 @@ type FeedbackRepository interface {
 	GetFiltered(feedbackType, status, search string) ([]model.Feedback, error)
 	GetByID(id uint) (*model.Feedback, error)
 	Update(feedback *model.Feedback) error
+	Delete(id uint) error
 }

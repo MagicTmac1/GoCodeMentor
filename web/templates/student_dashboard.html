@@ -875,7 +875,7 @@
                     <div class="stat-label">已解决</div>
                     <div id="resolved-feedbacks" class="stat-value" style="color: #67c23a;">0</div>
                 </div>
-                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({search: localStorage.getItem('user_id')})">
+                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({search: sessionStorage.getItem('user_id')})">
                     <div class="stat-label">我的反馈</div>
                     <div id="my-feedbacks" class="stat-value" style="color: #409eff;">0</div>
                 </div>
@@ -959,9 +959,9 @@
 
     <script>
         // 初始化用户信息
-        const userId = localStorage.getItem('user_id');
-        const userName = localStorage.getItem('user_name');
-        const userRole = localStorage.getItem('user_role');
+        const userId = sessionStorage.getItem('user_id');
+        const userName = sessionStorage.getItem('user_name');
+        const userRole = sessionStorage.getItem('user_role');
 
         // 设置 FeedbackState 用户信息
         if (window.FeedbackState) {
@@ -972,6 +972,7 @@
 
         if (!userId || userRole !== 'student') {
             window.location.href = '/login';
+            throw new Error('Redirecting to login...'); // 停止后续脚本执行
         }
 
         document.getElementById('userName').textContent = userName || '学生';
@@ -1117,9 +1118,11 @@
         }
 
         function logout() {
-            document.cookie = "user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-            document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            sessionStorage.clear();
             localStorage.clear();
+            document.cookie = "user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.cookie = "user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.cookie = "user_name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             window.location.href = '/login';
         }
 

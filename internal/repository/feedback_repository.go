@@ -55,3 +55,7 @@ func (r *feedbackRepository) GetByID(id uint) (*model.Feedback, error) {
 func (r *feedbackRepository) Update(feedback *model.Feedback) error {
 	return r.db.Save(feedback).Error
 }
+
+func (r *feedbackRepository) Delete(id uint) error {
+	return r.db.Delete(&model.Feedback{}, id).Error
+}

@@ -58,13 +58,36 @@ func TeacherAuthMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		if userRole != "teacher" {
+		if userRole != "teacher" && userRole != "admin" {
 			path := c.Request.URL.Path
 			isAPI := len(path) >= 4 && path[:4] == "/api"
 			if c.GetHeader("Accept") == "application/json" || isAPI {
-				c.JSON(403, gin.H{"error": "只有教师可以访问"})
+				c.JSON(403, gin.H{"error": "只有教师或管理员可以访问"})
 			} else {
-				c.String(403, "只有教师可以访问此页面")
+				c.String(403, "只有教师或管理员可以访问此页面")
+			}
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// AdminAuthMiddleware 管理员权限验证中间件
+func AdminAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userRole := c.GetString("userRole")
+		if userRole == "" {
+			userRole, _ = c.Cookie("user_role")
+		}
+
+		if userRole != "admin" {
+			path := c.Request.URL.Path
+			isAPI := len(path) >= 4 && path[:4] == "/api"
+			if c.GetHeader("Accept") == "application/json" || isAPI {
+				c.JSON(403, gin.H{"error": "只有管理员可以访问"})
+			} else {
+				c.String(403, "只有管理员可以访问此页面")
 			}
 			c.Abort()
 			return
@@ -113,6 +136,7 @@ func main() {
 		excelHandler,
 		AuthMiddleware(),
 		TeacherAuthMiddleware(),
+		AdminAuthMiddleware(),
 	)
 
 	// 6. 启动服务

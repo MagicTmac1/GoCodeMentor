@@ -11,8 +11,10 @@ type IUserService interface {
 	Login(username, password string) (*model.User, error)
 	GetByUsername(username string) (*model.User, error)
 	GetByID(id string) (*model.User, error)
+	GetAllUsers() ([]model.User, error)
 	GetStudentsByClassID(classID string) ([]model.User, error)
 	UpdateUser(user *model.User) error
+	ResetPassword(userID, newPassword string) error
 }
 
 type IClassService interface {
@@ -55,6 +57,7 @@ type IFeedbackService interface {
 	Respond(id uint, response string, teacherID string) error
 	GetStats() (map[string]interface{}, error)
 	GetFiltered(feedbackType, status, search string) ([]model.Feedback, error)
+	Delete(id uint) error
 }
 
 type ISessionService interface {

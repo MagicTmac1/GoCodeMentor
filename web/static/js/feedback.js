@@ -62,13 +62,25 @@ const FeedbackAPI = {
         
         try {
             const response = await fetch(url, { ...defaultOptions, ...options });
-            const data = await response.json();
             
-            if (!response.ok) {
-                throw new Error(data.error || '请求失败');
+            // 获取响应文本
+            const text = await response.text();
+            let data = {};
+            
+            if (text) {
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.warn('响应不是有效的JSON:', text);
+                    data = { message: text };
+                }
             }
             
-            return data;  // 直接返回数据，不包装
+            if (!response.ok) {
+                throw new Error(data.error || data.message || '请求失败');
+            }
+            
+            return data;
         } catch (error) {
             console.error('API请求失败:', error);
             throw error;
@@ -318,8 +330,8 @@ const FeedbackUI = {
             }
         };
         
-        const isTeacher = FeedbackState.user.role === 'teacher' || localStorage.getItem('user_role') === 'teacher';
-        const isMyFeedback = feedback.AnonymousID === FeedbackState.user.id || feedback.AnonymousID === localStorage.getItem('user_id');
+        const isTeacher = FeedbackState.user.role === 'teacher' || sessionStorage.getItem('user_role') === 'teacher';
+        const isMyFeedback = feedback.AnonymousID === FeedbackState.user.id || feedback.AnonymousID === sessionStorage.getItem('user_id');
         
         // 构建模态框内容
         contentDiv.innerHTML = `
@@ -537,6 +549,11 @@ const FeedbackController = {
     // 初始化
     async init() {
         try {
+            // 初始化用户信息
+            FeedbackState.user.id = sessionStorage.getItem('user_id') || '';
+            FeedbackState.user.role = sessionStorage.getItem('user_role') || 'student';
+            FeedbackState.user.name = sessionStorage.getItem('user_name') || '';
+
             // 先绑定事件，确保即使加载数据失败，过滤器和搜索也能用
             this.bindEvents();
 
@@ -594,7 +611,12 @@ const FeedbackController = {
             // 过滤 / 搜索时重置到第一页
             FeedbackState.ui.currentPage = 1;
             FeedbackUI.renderFeedbacks(feedbacks);
-            FeedbackUI.updateStats(feedbacks);
+            
+            // 仅在获取全部反馈（未过滤）时更新统计数据，避免过滤后统计卡片被错误地重置为0
+            const isFiltered = fetchParams.type || fetchParams.status || fetchParams.search;
+            if (!isFiltered) {
+                FeedbackUI.updateStats(feedbacks);
+            }
         } catch (error) {
             console.error('加载反馈失败:', error);
         }

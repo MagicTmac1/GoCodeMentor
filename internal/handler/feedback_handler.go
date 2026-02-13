@@ -157,3 +157,38 @@ func (h *FeedbackHandler) GetFilteredFeedback(c *gin.Context) {
 	}
 	c.JSON(200, feedbacks)
 }
+
+// DeleteFeedback handles deleting a feedback.
+func (h *FeedbackHandler) DeleteFeedback(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(400, gin.H{"error": "无效的反馈ID"})
+		return
+	}
+
+	// 从上下文获取当前用户信息
+	userID := c.GetString("userID")
+	userRole := c.GetString("userRole")
+
+	// 获取反馈详情以检查所有权
+	feedback, err := h.feedbackSvc.GetByID(uint(id))
+	if err != nil {
+		c.JSON(404, gin.H{"error": "反馈不存在"})
+		return
+	}
+
+	// 权限检查：只有教师、管理员或反馈发布者可以删除
+	isOwner := feedback.AnonymousID == userID
+	isStaff := userRole == "teacher" || userRole == "admin"
+
+	if !isOwner && !isStaff {
+		c.JSON(403, gin.H{"error": "无权删除此反馈"})
+		return
+	}
+
+	if err := h.feedbackSvc.Delete(uint(id)); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "反馈删除成功"})
+}

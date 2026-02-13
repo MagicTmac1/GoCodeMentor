@@ -65,8 +65,8 @@
 {{define "assignment_scripts"}}
 <script>
 // 获取当前登录用户信息
-const userId = localStorage.getItem('user_id') || '';
-const userRole = localStorage.getItem('user_role') || '';
+const userId = sessionStorage.getItem('user_id') || '';
+const userRole = sessionStorage.getItem('user_role') || '';
 
 function showCreateForm() {
     alert('手动创建功能开发中，请使用AI生成');

@@ -444,8 +444,8 @@
 
     <script>
         // Common State & Constants
-        const userId = localStorage.getItem('user_id');
-        const userRole = localStorage.getItem('user_role');
+        const userId = sessionStorage.getItem('user_id');
+        const userRole = sessionStorage.getItem('user_role');
         const isTeacher = userRole === 'teacher';
         
         // Context Data (Provided by specific templates)

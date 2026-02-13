@@ -370,8 +370,8 @@
 
     <script>
     // 检查是否已登录且是教师
-    const userId = localStorage.getItem('user_id');
-    const userRole = localStorage.getItem('user_role');
+    const userId = sessionStorage.getItem('user_id');
+    const userRole = sessionStorage.getItem('user_role');
 
     if (!userId) {
         window.location.href = '/login';

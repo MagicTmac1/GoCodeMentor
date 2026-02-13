@@ -71,6 +71,11 @@ func (s *UserService) GetByUsername(username string) (*model.User, error) {
 	return s.userRepo.GetByUsername(username)
 }
 
+// GetAllUsers 获取所有用户
+func (s *UserService) GetAllUsers() ([]model.User, error) {
+	return s.userRepo.GetAll()
+}
+
 // GetStudentsByClassID 获取班级下的所有学生
 func (s *UserService) GetStudentsByClassID(classID string) ([]model.User, error) {
 	return s.userRepo.GetByClassID(classID)
@@ -78,5 +83,21 @@ func (s *UserService) GetStudentsByClassID(classID string) ([]model.User, error)
 
 // UpdateUser 更新用户信息
 func (s *UserService) UpdateUser(user *model.User) error {
+	return s.userRepo.Update(user)
+}
+
+// ResetPassword 重置用户密码
+func (s *UserService) ResetPassword(userID, newPassword string) error {
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return err
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.Password = string(hashedPassword)
 	return s.userRepo.Update(user)
 }

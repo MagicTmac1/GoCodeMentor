@@ -38,6 +38,12 @@ func (r *userRepository) GetByClassID(classID string) ([]model.User, error) {
 	return users, err
 }
 
+func (r *userRepository) GetAll() ([]model.User, error) {
+	var users []model.User
+	err := r.db.Find(&users).Error
+	return users, err
+}
+
 func (r *userRepository) Update(user *model.User) error {
 	return r.db.Save(user).Error
 }

@@ -119,3 +119,8 @@ func (s *FeedbackService) GetStats() (map[string]interface{}, error) {
 func (s *FeedbackService) GetFiltered(feedbackType, status, search string) ([]model.Feedback, error) {
 	return s.feedbackRepo.GetFiltered(feedbackType, status, search)
 }
+
+// Delete 删除反馈
+func (s *FeedbackService) Delete(id uint) error {
+	return s.feedbackRepo.Delete(id)
+}

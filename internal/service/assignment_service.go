@@ -451,7 +451,7 @@ func (s *AssignmentService) GradeSubmission(ctx context.Context, submissionID st
 
 // 辅助函数：将答案map转换为JSON字符串
 func answersToString(answers map[string]string) string {
-	if answers == nil || len(answers) == 0 {
+	if len(answers) == 0 {
 		return "{}"
 	}
 	bytes, err := json.Marshal(answers)

@@ -589,8 +589,9 @@
                 
                 const score = sub.total_score !== undefined ? sub.total_score : (sub.TotalScore !== undefined ? sub.TotalScore : '未评分');
                 
-                const statusText = status === 'graded' ? '已批改' : (status === 'submitted' ? '待批改' : '未提交');
-                const statusIcon = status === 'graded' ? 
+                const statusText = (status === 'graded' || status === '已查看') ? '已批改' : 
+                                 ((status === 'submitted' || status === '已提交') ? '待批改' : '未提交');
+                const statusIcon = (status === 'graded' || status === '已查看') ? 
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : 
                     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
 
@@ -770,7 +771,8 @@
         }
                 
         // 2. 提交状态卡片 - 增强显示效果（教师专用）
-                if (submission.submitted === false || !submission.submitted) {
+                const isSubmitted = submission && (submission.id || submission.ID || submission.submitted === true);
+                if (!isSubmitted) {
                     html += `
                 <div class="submission-status-card submission-status-not-submitted" style="border-left: 6px solid #dc3545; background: linear-gradient(to right, #f8d7da, #f5c6cb);">
                     <div class="status-content">
@@ -866,7 +868,8 @@
                     
                     // 教师管理面板（仅教师可见）
                     const userRole = getCookie('user_role');
-                    if (userRole === 'teacher' && submission.submitted !== false) {
+                    const hasSubmission = submission && (submission.id || submission.ID);
+                    if (userRole === 'teacher' && hasSubmission) {
                         html += `
                 <div class="teacher-management-panel" style="margin-top: 30px; border: 2px solid #9c27b0; border-radius: 12px; padding: 25px; background: linear-gradient(135deg, #f9f4ff, #f3e5f5);">
                     <h4 style="margin: 0 0 20px; color: #9c27b0; font-size: 20px; display: flex; align-items: center; gap: 10px;">

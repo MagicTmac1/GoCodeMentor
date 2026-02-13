@@ -17,6 +17,7 @@ func Setup(
 	excelHandler *handler.ExcelHandler,
 	authMiddleware gin.HandlerFunc,
 	teacherAuthMiddleware gin.HandlerFunc,
+	adminAuthMiddleware gin.HandlerFunc,
 ) {
 	r.LoadHTMLGlob("web/templates/*")
 	r.Static("/static", "./web/static")
@@ -29,6 +30,7 @@ func Setup(
 	// Handle common browser/tool ghost requests to keep logs clean
 	r.GET("/.well-known/appspecific/com.chrome.devtools.json", func(c *gin.Context) { c.Status(204) })
 	r.GET("/favicon.ico", func(c *gin.Context) { c.Status(204) })
+	r.GET("/@vite/client", func(c *gin.Context) { c.Status(204) })
 
 	// Authenticated routes (Teacher & Student)
 	authorized := r.Group("/")
@@ -48,6 +50,13 @@ func Setup(
 		teacherOnly.GET("/class/:id/students", pageHandler.ClassStudentsPage)
 	}
 
+	// Admin-only routes
+	adminOnly := r.Group("/")
+	adminOnly.Use(authMiddleware, adminAuthMiddleware)
+	{
+		adminOnly.GET("/admin/accounts", pageHandler.AccountManagementPage)
+	}
+
 	r.GET("/student_assignments.html", authMiddleware, teacherAuthMiddleware, pageHandler.StudentAssignmentsPage)
 
 	// API routes
@@ -57,6 +66,10 @@ func Setup(
 		api.POST("/chat", sessionHandler.Chat)
 		api.GET("/history", sessionHandler.GetHistory)
 		api.GET("/sessions", sessionHandler.GetUserSessions)
+
+		// Admin APIs
+		api.GET("/admin/users", adminAuthMiddleware, userHandler.GetAllUsers)
+		api.POST("/admin/reset-password", adminAuthMiddleware, userHandler.ResetPassword)
 
 		// Class management
 		api.POST("/classes", teacherAuthMiddleware, classHandler.CreateClass)
@@ -105,6 +118,7 @@ func Setup(
 		api.POST("/feedback/:id/respond", teacherAuthMiddleware, feedbackHandler.RespondFeedback)
 		api.GET("/feedback/stats", teacherAuthMiddleware, feedbackHandler.GetFeedbackStats)
 		api.GET("/feedback/filter", feedbackHandler.GetFilteredFeedback)
+		api.DELETE("/feedback/:id", feedbackHandler.DeleteFeedback)
 
 		// Excel templates and imports
 		api.GET("/templates/students", teacherAuthMiddleware, excelHandler.DownloadStudentTemplate)

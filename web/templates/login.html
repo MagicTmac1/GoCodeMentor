@@ -172,6 +172,9 @@
     </div>
 
     <script>
+        // 清理旧的 localStorage 避免干扰
+        localStorage.clear();
+        
         let isLogin = true;
 
         function toggleForm() {
@@ -210,14 +213,14 @@
                 
                 const data = await res.json();
                 if (res.ok) {
-                    // 存储到 localStorage 供前端使用
-                    localStorage.setItem('user_id', data.id);
-                    localStorage.setItem('user_name', data.name);
-                    localStorage.setItem('user_role', data.role);
-                    // 同时设置 Cookie 供后端验证
-                    document.cookie = `user_id=${data.id}; path=/; max-age=${7*24*60*60}`;
-                    document.cookie = `user_role=${data.role}; path=/; max-age=${7*24*60*60}`;
-                    document.cookie = `user_name=${data.name}; path=/; max-age=${7*24*60*60}`;
+                    // 存储到 sessionStorage 供前端使用（关闭标签页即失效）
+                    sessionStorage.setItem('user_id', data.id);
+                    sessionStorage.setItem('user_name', data.name);
+                    sessionStorage.setItem('user_role', data.role);
+                    // 同时设置 Cookie 供后端验证（不设 max-age，关闭浏览器即失效）
+                    document.cookie = `user_id=${data.id}; path=/`;
+                    document.cookie = `user_role=${data.role}; path=/`;
+                    document.cookie = `user_name=${data.name}; path=/`;
                     window.location.href = '/';
                 } else {
                     alert(data.error || '登录失败');
@@ -257,8 +260,8 @@
             }
         }
 
-        // 检查是否已登录
-        const userId = localStorage.getItem('user_id');
+        // 检查是否已登录（使用 sessionStorage）
+        const userId = sessionStorage.getItem('user_id');
         if (userId) {
             window.location.href = '/';
         }

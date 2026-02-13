@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"GoCodeMentor/internal/model"
 
+	"github.com/google/uuid"
 	"github.com/spf13/viper"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -92,7 +95,43 @@ func InitDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
+	// 初始化管理员账号
+	initAdminUser(db)
+
 	return db, nil
+}
+
+func initAdminUser(db *gorm.DB) {
+	var count int64
+	db.Model(&model.User{}).Where("role = ?", "admin").Count(&count)
+	if count == 0 {
+		fmt.Println("正在初始化管理员账号...")
+		// 检查用户名 admin 是否已存在
+		var existingUser model.User
+		if err := db.Where("username = ?", "admin").First(&existingUser).Error; err != nil {
+			// 如果用户名 admin 不存在，则创建一个
+			hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+			admin := &model.User{
+				ID:        uuid.New().String(),
+				Username:  "admin",
+				Password:  string(hashedPassword),
+				Name:      "系统管理员",
+				Role:      "admin",
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}
+			if err := db.Create(admin).Error; err != nil {
+				fmt.Printf("初始化管理员账号失败: %v\n", err)
+			} else {
+				fmt.Println("管理员账号 (admin/admin123) 初始化成功！")
+			}
+		} else {
+			// 如果 admin 用户已存在但角色不是 admin，则更新角色
+			existingUser.Role = "admin"
+			db.Save(&existingUser)
+			fmt.Println("已将现有用户 admin 的角色更新为管理员")
+		}
+	}
 }
 
 func getEnv(key, defaultValue string) string {

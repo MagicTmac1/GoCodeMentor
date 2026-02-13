@@ -80,6 +80,14 @@ func (m *MockAssignmentClassRepository) GetByAssignmentID(assignmentID string) (
 	return args.Get(0).([]model.AssignmentClass), args.Error(1)
 }
 
+func (m *MockAssignmentClassRepository) GetByClassID(classID string) ([]model.AssignmentClass, error) {
+	args := m.Called(classID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.AssignmentClass), args.Error(1)
+}
+
 func (m *MockAssignmentClassRepository) Update(ac *model.AssignmentClass) error {
 	args := m.Called(ac)
 	return args.Error(0)
@@ -90,8 +98,8 @@ func (m *MockAssignmentClassRepository) DeleteByAssignmentID(assignmentID string
 	return args.Error(0)
 }
 
-func (m *MockAssignmentClassRepository) DeleteByID(id string) error {
-	args := m.Called(id)
+func (m *MockAssignmentClassRepository) DeleteByAssignmentAndClass(assignmentID, classID string) error {
+	args := m.Called(assignmentID, classID)
 	return args.Error(0)
 }
 
@@ -164,6 +172,19 @@ type MockUserRepository struct {
 	mock.Mock
 }
 
+func (m *MockUserRepository) Create(user *model.User) error {
+	args := m.Called(user)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) GetByUsername(username string) (*model.User, error) {
+	args := m.Called(username)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.User), args.Error(1)
+}
+
 func (m *MockUserRepository) GetByID(id string) (*model.User, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
@@ -172,9 +193,40 @@ func (m *MockUserRepository) GetByID(id string) (*model.User, error) {
 	return args.Get(0).(*model.User), args.Error(1)
 }
 
+func (m *MockUserRepository) GetByClassID(classID string) ([]model.User, error) {
+	args := m.Called(classID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.User), args.Error(1)
+}
+
+func (m *MockUserRepository) GetAll() ([]model.User, error) {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.User), args.Error(1)
+}
+
+func (m *MockUserRepository) Update(user *model.User) error {
+	args := m.Called(user)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) Delete(user *model.User) error {
+	args := m.Called(user)
+	return args.Error(0)
+}
+
 // MockClassRepository 模拟班级仓储
 type MockClassRepository struct {
 	mock.Mock
+}
+
+func (m *MockClassRepository) Create(class *model.Class) error {
+	args := m.Called(class)
+	return args.Error(0)
 }
 
 func (m *MockClassRepository) GetByID(id string) (*model.Class, error) {
@@ -183,6 +235,27 @@ func (m *MockClassRepository) GetByID(id string) (*model.Class, error) {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.Class), args.Error(1)
+}
+
+func (m *MockClassRepository) GetByCode(code string) (*model.Class, error) {
+	args := m.Called(code)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Class), args.Error(1)
+}
+
+func (m *MockClassRepository) GetByTeacherID(teacherID string) ([]model.Class, error) {
+	args := m.Called(teacherID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]model.Class), args.Error(1)
+}
+
+func (m *MockClassRepository) Delete(id string) error {
+	args := m.Called(id)
+	return args.Error(0)
 }
 
 // TestAssignmentService_GetPublishedClasses 测试获取已发布班级列表
@@ -214,19 +287,6 @@ func TestAssignmentService_GetPublishedClasses(t *testing.T) {
 	releasedAt := time.Now()
 
 	// 设置模拟期望
-	mockAssignRepo.On("GetByID", assignmentID).Return(&model.Assignment{
-		ID:          assignmentID,
-		Title:       "测试作业",
-		Description: "测试描述",
-		TeacherID:   "teacher-id",
-		Type:        "mixed",
-		Status:      "published",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}, nil)
-
-	mockQuestionRepo.On("GetByAssignmentID", assignmentID).Return([]model.Question{}, nil)
-
 	mockAssignmentClassRepo.On("GetByAssignmentID", assignmentID).Return([]model.AssignmentClass{
 		{
 			ID:           uuid.New().String(),
@@ -263,84 +323,88 @@ func TestAssignmentService_GetPublishedClasses(t *testing.T) {
 	mockClassRepo.AssertExpectations(t)
 }
 
-// TestAssignmentService_PublishAssignment 测试发布作业到班级
+// TestAssignmentService_PublishAssignment 测试发布作业
 func TestAssignmentService_PublishAssignment(t *testing.T) {
-	// 初始化模拟仓储
-	mockAssignRepo := new(MockAssignmentRepository)
-	mockAssignmentClassRepo := new(MockAssignmentClassRepository)
-	mockQuestionRepo := new(MockQuestionRepository)
-	mockSubmissionRepo := new(MockSubmissionRepository)
-	mockUserRepo := new(MockUserRepository)
-	mockClassRepo := new(MockClassRepository)
-
-	// 创建服务
-	service := &AssignmentService{
-		assignRepo:          mockAssignRepo,
-		assignmentClassRepo: mockAssignmentClassRepo,
-		questionRepo:        mockQuestionRepo,
-		submissionRepo:      mockSubmissionRepo,
-		userRepo:            mockUserRepo,
-		classRepo:           mockClassRepo,
-		siliconFlow:         nil,
-	}
-
-	// 测试数据
-	assignmentID := uuid.New().String()
-	classID := uuid.New().String()
-	deadline := time.Now().Add(24 * time.Hour)
-
 	// 情况1：首次发布（作业为草稿状态）
-	mockAssignRepo.On("GetByID", assignmentID).Return(&model.Assignment{
-		ID:          assignmentID,
-		Title:       "测试作业",
-		Description: "测试描述",
-		TeacherID:   "teacher-id",
-		Type:        "mixed",
-		Status:      "draft",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}, nil)
+	t.Run("FirstPublish", func(t *testing.T) {
+		mockAssignRepo := new(MockAssignmentRepository)
+		mockAssignmentClassRepo := new(MockAssignmentClassRepository)
+		mockQuestionRepo := new(MockQuestionRepository)
+		mockSubmissionRepo := new(MockSubmissionRepository)
+		mockUserRepo := new(MockUserRepository)
+		mockClassRepo := new(MockClassRepository)
 
-	mockAssignmentClassRepo.On("GetByAssignmentAndClass", assignmentID, classID).Return((*model.AssignmentClass)(nil), nil)
-	mockAssignmentClassRepo.On("Create", mock.AnythingOfType("*model.AssignmentClass")).Return(nil)
-	mockAssignRepo.On("Update", mock.AnythingOfType("*model.Assignment")).Return(nil)
+		service := &AssignmentService{
+			assignRepo:          mockAssignRepo,
+			assignmentClassRepo: mockAssignmentClassRepo,
+			questionRepo:        mockQuestionRepo,
+			submissionRepo:      mockSubmissionRepo,
+			userRepo:            mockUserRepo,
+			classRepo:           mockClassRepo,
+		}
 
-	// 执行发布
-	err := service.PublishAssignment(assignmentID, classID, &deadline)
-	assert.NoError(t, err)
+		assignmentID := uuid.New().String()
+		classID := uuid.New().String()
+		deadline := time.Now().Add(24 * time.Hour)
+
+		mockAssignRepo.On("GetByID", assignmentID).Return(&model.Assignment{
+			ID:     assignmentID,
+			Status: "draft",
+		}, nil)
+
+		mockAssignmentClassRepo.On("GetByAssignmentAndClass", assignmentID, classID).Return((*model.AssignmentClass)(nil), nil)
+		mockAssignmentClassRepo.On("Create", mock.AnythingOfType("*model.AssignmentClass")).Return(nil)
+		mockAssignRepo.On("Update", mock.AnythingOfType("*model.Assignment")).Return(nil)
+
+		err := service.PublishAssignment(assignmentID, classID, &deadline)
+		assert.NoError(t, err)
+
+		mockAssignRepo.AssertExpectations(t)
+		mockAssignmentClassRepo.AssertExpectations(t)
+	})
 
 	// 情况2：已发布，更新截止时间
-	mockAssignRepo.On("GetByID", assignmentID).Return(&model.Assignment{
-		ID:          assignmentID,
-		Title:       "测试作业",
-		Description: "测试描述",
-		TeacherID:   "teacher-id",
-		Type:        "mixed",
-		Status:      "published",
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}, nil)
+	t.Run("UpdateDeadline", func(t *testing.T) {
+		mockAssignRepo := new(MockAssignmentRepository)
+		mockAssignmentClassRepo := new(MockAssignmentClassRepository)
+		mockQuestionRepo := new(MockQuestionRepository)
+		mockSubmissionRepo := new(MockSubmissionRepository)
+		mockUserRepo := new(MockUserRepository)
+		mockClassRepo := new(MockClassRepository)
 
-	existingAssignmentClass := &model.AssignmentClass{
-		ID:           uuid.New().String(),
-		AssignmentID: assignmentID,
-		ClassID:      classID,
-		Deadline:     &deadline,
-		ReleasedAt:   &deadline,
-		CreatedAt:    deadline,
-	}
+		service := &AssignmentService{
+			assignRepo:          mockAssignRepo,
+			assignmentClassRepo: mockAssignmentClassRepo,
+			questionRepo:        mockQuestionRepo,
+			submissionRepo:      mockSubmissionRepo,
+			userRepo:            mockUserRepo,
+			classRepo:           mockClassRepo,
+		}
 
-	mockAssignmentClassRepo.On("GetByAssignmentAndClass", assignmentID, classID).Return(existingAssignmentClass, nil)
-	mockAssignmentClassRepo.On("Update", mock.AnythingOfType("*model.AssignmentClass")).Return(nil)
+		assignmentID := uuid.New().String()
+		classID := uuid.New().String()
 
-	// 执行更新
-	newDeadline := time.Now().Add(48 * time.Hour)
-	err = service.PublishAssignment(assignmentID, classID, &newDeadline)
-	assert.NoError(t, err)
+		mockAssignRepo.On("GetByID", assignmentID).Return(&model.Assignment{
+			ID:     assignmentID,
+			Status: "published",
+		}, nil)
 
-	// 验证模拟调用
-	mockAssignRepo.AssertExpectations(t)
-	mockAssignmentClassRepo.AssertExpectations(t)
+		existingAssignmentClass := &model.AssignmentClass{
+			ID:           uuid.New().String(),
+			AssignmentID: assignmentID,
+			ClassID:      classID,
+		}
+
+		mockAssignmentClassRepo.On("GetByAssignmentAndClass", assignmentID, classID).Return(existingAssignmentClass, nil)
+		mockAssignmentClassRepo.On("Update", mock.AnythingOfType("*model.AssignmentClass")).Return(nil)
+
+		newDeadline := time.Now().Add(48 * time.Hour)
+		err := service.PublishAssignment(assignmentID, classID, &newDeadline)
+		assert.NoError(t, err)
+
+		mockAssignRepo.AssertExpectations(t)
+		mockAssignmentClassRepo.AssertExpectations(t)
+	})
 }
 
 // TestAssignmentService_DeleteAssignment 测试删除作业

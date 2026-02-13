@@ -23,11 +23,12 @@ func (h *PageHandler) LoginPage(c *gin.Context) {
 func (h *PageHandler) IndexPage(c *gin.Context) {
 	userRole := c.GetString("userRole")
 
-	if userRole == "teacher" {
+	switch userRole {
+	case "teacher", "admin":
 		c.File("web/templates/teacher_dashboard.html")
-	} else if userRole == "student" {
+	case "student":
 		c.File("web/templates/student_dashboard.html")
-	} else {
+	default:
 		c.Redirect(http.StatusFound, "/login")
 	}
 }
@@ -69,6 +70,16 @@ func (h *PageHandler) ClassStudentsPage(c *gin.Context) {
 	c.File("web/templates/class_students.html")
 }
 
+// AccountManagementPage renders the account management page (Admin only).
+func (h *PageHandler) AccountManagementPage(c *gin.Context) {
+	userRole := c.GetString("userRole")
+	if userRole != "admin" {
+		c.String(http.StatusForbidden, "只有管理员可以访问此页面")
+		return
+	}
+	c.File("web/templates/account_management.html")
+}
+
 // StudentChatsPage renders the student chats page.
 func (h *PageHandler) StudentChatsPage(c *gin.Context) {
 	requestedID := c.Param("id")
@@ -76,24 +87,26 @@ func (h *PageHandler) StudentChatsPage(c *gin.Context) {
 	userID := c.GetString("userID")
 	studentName := c.Query("name")
 
-	// 如果是学生，只能看自己的聊天记录
-	if userRole == "student" && requestedID != userID {
-		c.Redirect(http.StatusFound, "/")
-		return
-	}
-
-	if userRole == "teacher" {
-		c.HTML(http.StatusOK, "teacher_chat.html", gin.H{
-			"StudentID":   requestedID,
-			"StudentName": studentName,
-			"IsTeacher":   true,
-		})
-	} else {
+	switch userRole {
+	case "student":
+		// 如果是学生，只能看自己的聊天记录
+		if requestedID != userID {
+			c.Redirect(http.StatusFound, "/")
+			return
+		}
 		c.HTML(http.StatusOK, "student_chat.html", gin.H{
 			"StudentID":   userID,
 			"StudentName": studentName,
 			"IsTeacher":   false,
 		})
+	case "teacher", "admin":
+		c.HTML(http.StatusOK, "teacher_chat.html", gin.H{
+			"StudentID":   requestedID,
+			"StudentName": studentName,
+			"IsTeacher":   true,
+		})
+	default:
+		c.Redirect(http.StatusFound, "/login")
 	}
 }
 
