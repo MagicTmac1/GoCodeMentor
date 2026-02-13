@@ -16,11 +16,20 @@ func NewPageHandler() *PageHandler {
 
 // LoginPage renders the login page.
 func (h *PageHandler) LoginPage(c *gin.Context) {
+	// 登录页也禁用缓存，确保状态是最新的
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+	c.Header("Pragma", "no-cache")
+	c.Header("Expires", "0")
 	c.File("web/templates/login.html")
 }
 
 // IndexPage renders the index page, redirecting based on role.
 func (h *PageHandler) IndexPage(c *gin.Context) {
+	// 禁用缓存，防止角色切换时显示旧的 Dashboard
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+	c.Header("Pragma", "no-cache")
+	c.Header("Expires", "0")
+
 	userRole := c.GetString("userRole")
 
 	switch userRole {

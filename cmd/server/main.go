@@ -13,6 +13,11 @@ import (
 // AuthMiddleware 登录验证中间件（支持Cookie或Header）
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 针对所有鉴权路由禁用缓存，防止角色切换或登出后的状态残留
+		c.Header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+		c.Header("Pragma", "no-cache")
+		c.Header("Expires", "0")
+
 		// 优先从Cookie获取，其次从Header获取
 		userID, _ := c.Cookie("user_id")
 		if userID == "" {
@@ -26,6 +31,8 @@ func AuthMiddleware() gin.HandlerFunc {
 			if c.GetHeader("Accept") == "application/json" || isAPI {
 				c.JSON(401, gin.H{"error": "未登录"})
 			} else {
+				// 重定向到登录页时也确保不缓存
+				c.Header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 				c.Redirect(302, "/login")
 			}
 			c.Abort()

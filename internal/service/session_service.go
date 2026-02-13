@@ -6,6 +6,9 @@ import (
 	"GoCodeMentor/internal/repository"
 	"context"
 	"errors"
+	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/google/uuid"
 )
@@ -44,10 +47,18 @@ func (s *SessionService) Chat(ctx context.Context, sessionID, userID, userQuesti
 			UserID: userID,
 			Title:  userQuestion,
 		})
+
+		// 从外部文件读取提示词
+		systemPrompt, err := s.readPromptFile("chat_system.txt")
+		if err != nil {
+			log.Printf("[AI助教] 读取系统提示词失败: %v, 使用硬编码兜底", err)
+			systemPrompt = "你是一位专业的 Go 语言助教，擅长用通俗的例子解释概念。请用中文回答，提供代码示例。"
+		}
+
 		s.messageRepo.Create(&model.ChatMessage{
 			SessionID: sessionID,
 			Role:      "system",
-			Content:   "你是一位专业的 Go 语言助教，擅长用通俗的例子解释概念。请用中文回答，提供代码示例。",
+			Content:   systemPrompt,
 		})
 	}
 
@@ -159,4 +170,14 @@ func (s *SessionService) GetStudentSessions(teacherID, studentID string) ([]mode
 	}
 
 	return s.sessionRepo.GetByUserID(studentID)
+}
+
+// readPromptFile 从 configs/prompts 目录读取提示词文件
+func (s *SessionService) readPromptFile(fileName string) (string, error) {
+	path := filepath.Join("configs", "prompts", fileName)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }

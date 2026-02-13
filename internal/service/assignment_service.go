@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -48,12 +50,20 @@ func NewAssignmentService(
 
 // GenerateAssignmentByAI 通过AI生成作业
 func (s *AssignmentService) GenerateAssignmentByAI(ctx context.Context, topic string, difficulty string, teacherID string) (*model.Assignment, error) {
-	// 调用硅基流动API生成作业内容
-	systemPrompt := `你是一个严谨的编程作业生成器。
+	// 从外部文件读取提示词
+	systemPrompt, err := s.readPromptFile("assignment_system.txt")
+	if err != nil {
+		log.Printf("[AI生成作业] 读取系统提示词失败: %v, 使用硬编码兜底", err)
+		systemPrompt = `你是一个严谨的编程作业生成器。
 你必须严格遵守以下格式要求，且只能输出合法的 JSON 数据。
 严禁输出任何 Markdown 代码块标签（如 ` + "```" + `json）、严禁输出任何解释性文字、严禁输出 JSON 之外的任何内容。`
+	}
 
-	userPrompt := fmt.Sprintf(`请生成一个关于 %s 的编程作业，难度级别：%s。
+	userPromptTmpl, err := s.readPromptFile("assignment_user.txt")
+	var userPrompt string
+	if err != nil {
+		log.Printf("[AI生成作业] 读取用户提示词失败: %v, 使用硬编码兜底", err)
+		userPrompt = fmt.Sprintf(`请生成一个关于 %s 的编程作业，难度级别：%s。
 
 ### 必须严格遵守的 JSON 结构：
 {
@@ -86,6 +96,9 @@ func (s *AssignmentService) GenerateAssignmentByAI(ctx context.Context, topic st
 1. 包含 3-5 个题目。
 2. 编程题的 answer 字段必须包含真实可用的 Go 代码。
 3. 只能返回上述 JSON 对象，不要有任何前缀或后缀文字。`, topic, difficulty)
+	} else {
+		userPrompt = fmt.Sprintf(userPromptTmpl, topic, difficulty)
+	}
 
 	messages := []siliconflow.Message{
 		{Role: "system", Content: systemPrompt},
@@ -650,6 +663,16 @@ func (s *AssignmentService) GetSubmissionCodeForDownload(submissionID string) (s
 		submission.CreatedAt.Format("20060102-150405"))
 
 	return submission.CodeContent, fileName, nil
+}
+
+// readPromptFile 从 configs/prompts 目录读取提示词文件
+func (s *AssignmentService) readPromptFile(fileName string) (string, error) {
+	path := filepath.Join("configs", "prompts", fileName)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }
 
 // GetPublishedClasses 获取作业发布到的班级列表（包含班级名称）

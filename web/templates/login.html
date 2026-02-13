@@ -213,15 +213,21 @@
                 
                 const data = await res.json();
                 if (res.ok) {
+                    // 先清理旧的 sessionStorage 确保没有残留
+                    sessionStorage.clear();
+                    
                     // 存储到 sessionStorage 供前端使用（关闭标签页即失效）
                     sessionStorage.setItem('user_id', data.id);
                     sessionStorage.setItem('user_name', data.name);
                     sessionStorage.setItem('user_role', data.role);
-                    // 同时设置 Cookie 供后端验证（不设 max-age，关闭浏览器即失效）
+                    
+                    // 设置 Cookie 供后端验证（不设 max-age，关闭浏览器即失效）
                     document.cookie = `user_id=${data.id}; path=/`;
                     document.cookie = `user_role=${data.role}; path=/`;
                     document.cookie = `user_name=${data.name}; path=/`;
-                    window.location.href = '/';
+                    
+                    // 强制跳转到首页，后端会根据 Cookie 里的 role 渲染正确的 Dashboard
+                    window.location.replace('/');
                 } else {
                     alert(data.error || '登录失败');
                 }
@@ -260,11 +266,24 @@
             }
         }
 
-        // 检查是否已登录（使用 sessionStorage）
-        const userId = sessionStorage.getItem('user_id');
-        if (userId) {
-            window.location.href = '/';
+        // 检查是否已登录（使用 sessionStorage 和 Cookie 双重检查）
+        function checkLogin() {
+            const userId = sessionStorage.getItem('user_id');
+            // 简单检查 cookie 中是否存在 user_id
+            const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('user_id='));
+            
+            if (userId && hasCookie) {
+                window.location.replace('/');
+            } else if (userId || hasCookie) {
+                // 状态不一致，清理掉
+                sessionStorage.clear();
+                document.cookie = "user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                document.cookie = "user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                document.cookie = "user_name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            }
         }
+        
+        checkLogin();
     </script>
 </body>
 </html>
