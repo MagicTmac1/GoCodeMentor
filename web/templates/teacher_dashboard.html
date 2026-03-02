@@ -1051,6 +1051,25 @@
         </div>
     </div>
     
+    <div id="deleteClassModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3>删除班级</h3>
+            <p style="margin-bottom: 20px; color: #666; font-size: 14px;">请选择要删除的班级。删除班级将同时删除该班级的所有学生和相关作业发布记录，此操作不可撤销。</p>
+            
+            <div class="form-group">
+                <label for="deleteClassSelect">选择班级:</label>
+                <select id="deleteClassSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-top: 5px;">
+                    <!-- Classes will be loaded here -->
+                </select>
+            </div>
+
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button class="btn btn-danger" onclick="deleteClass()">确认删除</button>
+                <button class="btn btn-secondary" onclick="hideDeleteClassModal()">取消</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // 获取用户信息
         const userId = sessionStorage.getItem('user_id');
@@ -1062,6 +1081,87 @@
             window.FeedbackState.user.id = userId;
             window.FeedbackState.user.role = userRole;
             window.FeedbackState.user.name = userName;
+        }
+
+        // 班级管理下拉菜单控制
+        function toggleClassDropdown() {
+            const dropdown = document.getElementById('classDropdown');
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            } else {
+                dropdown.style.display = 'block';
+            }
+        }
+
+        function hideClassDropdown() {
+            document.getElementById('classDropdown').style.display = 'none';
+        }
+
+        function showDeleteClassModal() {
+            document.getElementById('deleteClassModal').style.display = 'flex';
+            loadClassesForDelete(); // Load classes when the modal is shown
+        }
+
+        function hideDeleteClassModal() {
+            document.getElementById('deleteClassModal').style.display = 'none';
+        }
+
+        async function loadClassesForDelete() {
+            const selectElement = document.getElementById('deleteClassSelect');
+            selectElement.innerHTML = '<option value="">加载中...</option>';
+            try {
+                const res = await fetch('/api/classes', {
+                    headers: { 'X-User-ID': userId, 'X-User-Role': userRole }
+                });
+                if (!res.ok) throw new Error('获取班级列表失败');
+                const classes = await res.json();
+                
+                if (classes.length === 0) {
+                    selectElement.innerHTML = '<option value="">暂无班级可删除</option>';
+                    selectElement.disabled = true;
+                } else {
+                    selectElement.innerHTML = classes.map(c => `<option value="${c.ID}">${c.Name} (邀请码: ${c.Code})</option>`).join('');
+                    selectElement.disabled = false;
+                }
+            } catch (e) {
+                console.error('加载删除班级列表失败:', e);
+                selectElement.innerHTML = '<option value="">加载失败</option>';
+                selectElement.disabled = true;
+                alert('加载班级列表失败: ' + e.message);
+            }
+        }
+
+        async function deleteClass() {
+            const classId = document.getElementById('deleteClassSelect').value;
+            if (!classId) {
+                alert('请选择要删除的班级');
+                return;
+            }
+            if (!confirm('确定要删除这个班级吗？此操作不可撤销，班级内的所有学生和作业发布记录也将被删除！')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/classes/${classId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+
+                if (res.ok) {
+                    alert('班级删除成功！');
+                    hideDeleteClassModal();
+                    loadClasses(); // Refresh the class list on the dashboard
+                } else {
+                    const data = await res.json();
+                    alert('删除失败: ' + (data.error || '未知错误'));
+                }
+            } catch (e) {
+                console.error('删除班级失败:', e);
+                alert('网络错误: ' + e.message);
+            }
         }
 
         // 检查登录状态
