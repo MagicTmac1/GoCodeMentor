@@ -88,6 +88,8 @@ type SubmissionRepository interface {
 	GetByID(id string) (*model.Submission, error)
 	// GetByAssignmentAndStudent 根据作业 ID 和学生 ID 获取特定的提交记录
 	GetByAssignmentAndStudent(assignmentID, studentID string) (*model.Submission, error)
+	// GetByAssignmentIDs a
+	GetByAssignmentIDs(assignmentIDs []string) ([]model.Submission, error)
 	// Update 更新提交记录（如批改结果、分数等）
 	Update(submission *model.Submission) error
 	// CountByAssignmentID 根据作业 ID 和状态统计提交数量

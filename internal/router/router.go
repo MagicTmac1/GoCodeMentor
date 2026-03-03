@@ -80,7 +80,8 @@ func Setup(
 		api.POST("/classes/:id/students", teacherAuthMiddleware, classHandler.AddStudentToClass)
 		api.DELETE("/classes/:id/students/:studentId", teacherAuthMiddleware, classHandler.RemoveStudentFromClass)
 		api.DELETE("/classes/:id", teacherAuthMiddleware, classHandler.DeleteClass)
-		api.GET("/classes/:id/stats", teacherAuthMiddleware, classHandler.GetClassStats)
+        api.GET("/classes/:id/stats", teacherAuthMiddleware, classHandler.GetClassStats)
+        api.GET("/classes/:id/ai-analysis", teacherAuthMiddleware, classHandler.AnalyzeClass)
 
 		// User management
 		api.GET("/users/find", userHandler.FindUser)

@@ -282,3 +282,19 @@ func (h *ClassHandler) GetClassStats(c *gin.Context) {
 		"assignment_stats":  assignmentStats,
 	})
 }
+
+// AnalyzeClass handles generating an AI-powered academic analysis for a class.
+func (h *ClassHandler) AnalyzeClass(c *gin.Context) {
+	classID := c.Param("id")
+
+	// Use the request context for cancellation propagation.
+	ctx := c.Request.Context()
+
+	report, err := h.classSvc.GenerateClassAnalysisReport(ctx, classID)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"report": report})
+}

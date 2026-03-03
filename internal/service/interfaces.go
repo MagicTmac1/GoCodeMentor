@@ -44,6 +44,8 @@ type IClassService interface {
 	RemoveStudentFromClass(studentID, classID string) error
 	// DeleteClass 删除班级及其相关关联
 	DeleteClass(classID string) error
+	// GenerateClassAnalysisReport 生成班级学情分析报告
+	GenerateClassAnalysisReport(ctx context.Context, classID string) (string, error)
 }
 
 // IAssignmentService 定义了作业生成、发布与批改相关的业务逻辑接口。

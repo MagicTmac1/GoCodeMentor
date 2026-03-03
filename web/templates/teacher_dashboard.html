@@ -6,6 +6,10 @@
     <title>教师工作台 - GoCodeMentor</title>
     <link rel="stylesheet" href="/static/css/main.css">
     <script src="/static/js/feedback.js"></script>
+    <script src="https://unpkg.com/marked@12.0.0/marked.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/languages/go.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -133,6 +137,7 @@
             transition: all 0.3s;
             cursor: pointer;
             border: 2px solid transparent;
+            position: relative; /* 添加这行以便绝对定位子元素 */
         }
         .class-card:hover {
             transform: translateY(-4px);
@@ -173,6 +178,77 @@
             font-size: 12px;
             color: #999;
             margin-top: 4px;
+        }
+        .ai-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-right: 5px;
+            display: inline-block;
+        }
+        .ai-analysis-btn {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        /* Markdown Body Styling */
+        .markdown-body { 
+            font-size: 15px; 
+            line-height: 1.7; 
+            word-wrap: break-word;
+            padding: 20px 24px;
+        }
+        .markdown-body p { margin-bottom: 12px; }
+        .markdown-body p:last-child { margin-bottom: 0; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+            margin-top: 20px;
+            margin-bottom: 12px;
+            font-weight: 700;
+            line-height: 1.25;
+        }
+        .markdown-body h1 { font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+        .markdown-body h2 { font-size: 1.25em; border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
+        .markdown-body h3 { font-size: 1.1em; }
+        .markdown-body h4 { font-size: 1em; }
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 2em;
+            margin-bottom: 12px;
+        }
+        .markdown-body li { margin-bottom: 4px; }
+        .markdown-body blockquote {
+            padding: 0 1em;
+            color: #666;
+            border-left: 0.25em solid #eee;
+            margin: 0 0 12px 0;
+        }
+        .markdown-body pre { 
+            background-color: #1e1e1e;
+            border-radius: 10px; 
+            padding: 16px; 
+            overflow: auto; 
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        .markdown-body pre code { 
+            background: none !important; 
+            padding: 0 !important;
+            font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+            color: #d4d4d4;
+        }
+        .markdown-body :not(pre) > code { 
+            font-family: SFMono-Regular, Consolas, monospace; 
+            font-size: 85%; 
+            background: rgba(79, 70, 229, 0.08); 
+            color: #4f46e5;
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-weight: 500;
         }
         
         /* 弹窗 */
@@ -1198,6 +1274,37 @@
             window.location.replace('/login');
         }
 
+        async function createClass() {
+            const className = document.getElementById('className').value;
+            if (!className) {
+                alert('请输入班级名称');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/classes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    },
+                    body: JSON.stringify({ name: className })
+                });
+
+                if (res.ok) {
+                    alert('班级创建成功！');
+                    hideCreateModal();
+                    loadClasses(); // 重新加载班级列表
+                } else {
+                    const data = await res.json();
+                    alert('创建失败: ' + (data.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+
         function createAssignment() {
             showCreateAssignmentModal();
         }
@@ -1249,6 +1356,51 @@
 
         function viewClass(classId) {
             window.location.href = '/class/' + classId + '/students';
+        }
+
+        async function analyzeClass(classId, className) {
+            const modal = document.getElementById('analysisModal');
+            const modalBody = document.getElementById('analysisModalBody');
+            const modalTitle = document.getElementById('analysisModalTitle');
+
+            modalTitle.textContent = `📊 学情分析报告 - ${className}`;
+            modalBody.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #999;">
+                    <div class="feedback-loading-spinner" style="margin-bottom: 16px;"></div>
+                    <h3 style="font-size: 18px; margin-bottom: 8px; color: #666;">正在生成中，请稍后...</h3>
+                    <p>AI正在分析该班级的作业数据，这可能需要几十秒时间。</p>
+                </div>
+            `;
+            modal.style.display = 'flex';
+
+            try {
+                const res = await fetch(`/api/classes/${classId}/ai-analysis`, {
+                    method: 'GET',
+                    headers: {
+                        'X-User-ID': userId,
+                        'X-User-Role': userRole
+                    }
+                });
+
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.error || '报告生成失败');
+                }
+
+                const data = await res.json();
+                
+                modalBody.innerHTML = marked.parse(data.report || '未能生成报告内容。');
+                modalBody.classList.add('markdown-body');
+                
+                // Highlight code blocks
+                modalBody.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightElement(block);
+                });
+
+            } catch (e) {
+                modalBody.innerHTML = `<div style="padding: 40px; text-align: center; color: #dc3545;">❌ 糟糕，出错了！<br><br>${e.message}</div>`;
+                modalBody.classList.remove('markdown-body');
+            }
         }
 
         let currentAssignIdForPublish = null;
@@ -1310,11 +1462,13 @@
         function hidePublishModal() {
             document.getElementById('publishModal').style.display = 'none';
             currentAssignIdForPublish = null;
+            // 每次关闭发布窗口时，都刷新作业列表，以确保显示最新的发布状态
+            loadAssignments();
         }
 
         function confirmMultiPublish() {
+            // 这个函数现在只是 hidePublishModal 的一个别名，因为刷新逻辑已经移入 hidePublishModal
             hidePublishModal();
-            loadAssignments();
         }
 
         async function publishToClass(classId) {
@@ -1429,26 +1583,36 @@
         }
 
         async function deleteAssignment(id) {
-            if (!confirm('确定要删除这个作业吗？此操作不可撤销。')) return;
-            
-            try {
-                const res = await fetch('/api/assignments/' + id, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-User-ID': userId,
-                        'X-User-Role': userRole
+            // 首先，弹出确认对话框，并把用户的选择（true/false）保存在 wantsToDelete 变量中
+            const wantsToDelete = window.confirm('确定要删除这个作业吗？此操作不可撤销。');
+
+            // 仅当用户点击“确定”时，wantsToDelete才为true
+            if (wantsToDelete) {
+                // 用户确认后，才执行删除操作
+                try {
+                    const res = await fetch('/api/assignments/' + id, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-User-ID': userId,
+                            'X-User-Role': userRole
+                        }
+                    });
+
+                    if (res.ok) {
+                        alert('删除成功');
+                        // 删除成功后，重新加载作业列表以刷新界面
+                        loadAssignments(); 
+                    } else {
+                        const data = await res.json();
+                        alert('删除失败: ' + (data.error || '未知错误'));
                     }
-                });
-                
-                if (res.ok) {
-                    alert('删除成功');
-                    loadAssignments();
-                } else {
-                    const data = await res.json();
-                    alert('删除失败: ' + (data.error || '未知错误'));
+                } catch (e) {
+                    alert('网络错误: ' + e.message);
                 }
-            } catch (e) {
-                alert('网络错误: ' + e.message);
+            } else {
+                // 如果用户点击了“取消”，wantsToDelete 为 false，此代码块执行。
+                // 我们在这里不执行任何操作，这样就不会有任何提示，也不会刷新页面。
+                console.log('用户取消了删除操作。');
             }
         }
 
@@ -1565,6 +1729,10 @@
                                     <div class="label">未提交</div>
                                 </div>
                             </div>
+                            <div class="ai-analysis-btn" onclick="event.stopPropagation(); analyzeClass('${c.ID}', '${c.Name}')">
+                                <div class="num" style="color: #764ba2;">✨</div>
+                                <div class="label"><span class="ai-badge">AI</span>学情分析</div>
+                            </div>
                         </div>
                     `).join('');
                     
@@ -1590,11 +1758,12 @@
             document.getElementById('assignmentsSection').style.display = tab === 'assignments' ? 'block' : 'none';
             document.getElementById('feedbackSection').style.display = tab === 'feedback' ? 'block' : 'none';
             
-            if (tab === 'assignments') {
+            // 切换到对应标签页时，重新加载数据
+            if (tab === 'classes') {
+                loadClasses();
+            } else if (tab === 'assignments') {
                 loadAssignments();
-            }
-            
-            if (tab === 'feedback') {
+            } else if (tab === 'feedback') {
                 window.FeedbackController?.loadFeedbacks();
             }
             
@@ -1696,6 +1865,9 @@
 
         // 加载已发布班级信息
         async function loadPublishedClasses(assignId) {
+            const container = document.getElementById(`published-classes-${assignId}`);
+            if (!container) return; // 安全起见，如果容器不存在则直接返回
+
             try {
                 const res = await fetch(`/api/assignments/${assignId}/published`, {
                     headers: {
@@ -1706,7 +1878,6 @@
                 
                 if (res.ok) {
                     const publishedClasses = await res.json();
-                    const container = document.getElementById(`published-classes-${assignId}`);
                     
                     if (publishedClasses && publishedClasses.length > 0) {
                         container.innerHTML = '已发布到: ' + publishedClasses.map(pc => {
@@ -1721,10 +1892,15 @@
                             }
                             return `<span>${pc.class_name}${deadlineText}</span>`;
                         }).join('');
+                    } else {
+                        container.innerHTML = '<span style="color: #999;">未发布</span>';
                     }
+                } else {
+                    container.innerHTML = '<span style="color: red;">加载发布信息失败</span>';
                 }
             } catch (e) {
                 console.error('加载已发布班级失败:', e);
+                container.innerHTML = `<span style="color: red;">加载失败: ${e.message}</span>`;
             }
         }
 
@@ -1869,5 +2045,22 @@
             loadClasses();
         }
     </script>
+
+    <!-- 学情分析弹窗 -->
+    <div id="analysisModal" class="modal-overlay" style="display: none;">
+        <div class="stat-modal-content">
+            <div class="stat-modal-header">
+                <h3 id="analysisModalTitle">📊 学情分析报告</h3>
+                <span class="close-btn" onclick="document.getElementById('analysisModal').style.display = 'none'">×</span>
+            </div>
+            <div class="stat-modal-body" id="analysisModalBody">
+                <!-- 内容将动态加载 -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="document.getElementById('analysisModal').style.display = 'none'">关闭</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
