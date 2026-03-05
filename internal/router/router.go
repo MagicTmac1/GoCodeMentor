@@ -80,8 +80,8 @@ func Setup(
 		api.POST("/classes/:id/students", teacherAuthMiddleware, classHandler.AddStudentToClass)
 		api.DELETE("/classes/:id/students/:studentId", teacherAuthMiddleware, classHandler.RemoveStudentFromClass)
 		api.DELETE("/classes/:id", teacherAuthMiddleware, classHandler.DeleteClass)
-        api.GET("/classes/:id/stats", teacherAuthMiddleware, classHandler.GetClassStats)
-        api.GET("/classes/:id/ai-analysis", teacherAuthMiddleware, classHandler.AnalyzeClass)
+		api.GET("/classes/:id/stats", teacherAuthMiddleware, classHandler.GetClassStats)
+		api.GET("/classes/:id/ai-analysis", teacherAuthMiddleware, classHandler.AnalyzeClass)
 
 		// User management
 		api.GET("/users/find", userHandler.FindUser)
@@ -120,6 +120,13 @@ func Setup(
 		api.GET("/feedback/stats", teacherAuthMiddleware, feedbackHandler.GetFeedbackStats)
 		api.GET("/feedback/filter", feedbackHandler.GetFilteredFeedback)
 		api.DELETE("/feedback/:id", feedbackHandler.DeleteFeedback)
+
+		// Resource routes
+		api.GET("/resources", feedbackHandler.GetAllResources)               // Get all resources
+		api.POST("/resources", feedbackHandler.CreateResource)               // Create a new resource
+		api.DELETE("/resources/:resourceId", feedbackHandler.DeleteResource) // Delete a resource
+		api.GET("/resources/stats", feedbackHandler.GetResourceStats)
+		api.POST("/resources/:resourceId/like", feedbackHandler.ToggleResourceLike)
 
 		// Excel templates and imports
 		api.GET("/templates/students", teacherAuthMiddleware, excelHandler.DownloadStudentTemplate)

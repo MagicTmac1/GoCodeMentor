@@ -1,6 +1,7 @@
 package service
 
 import (
+	"GoCodeMentor/internal/dto"
 	"GoCodeMentor/internal/model"
 	"context"
 	"time"
@@ -118,4 +119,13 @@ type ISessionService interface {
 	GetUserSessions(userID string) ([]model.ChatSession, error)
 	// GetStudentSessions 教师获取特定学生的对话会话记录
 	GetStudentSessions(teacherID, studentID string) ([]model.ChatSession, error)
+}
+
+// IResourceService defines the interface for resource-related business logic.
+type IResourceService interface {
+	ToggleLike(userID, resourceID string) (bool, int64, error)
+	GetResourceStats(userID string) (*dto.ResourceStatsResponse, error)
+	CreateResource(req *dto.CreateResourceRequest) (*model.Resource, error)
+	GetAllResources() ([]model.Resource, error)
+	DeleteResource(resourceID string) error
 }

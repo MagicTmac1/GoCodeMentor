@@ -24,7 +24,7 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .header-content {
-            max-width: 1200px;
+            max-width: 1500px;
             margin: 0 auto;
             display: flex;
             justify-content: space-between;
@@ -65,7 +65,7 @@
             display: flex;
             gap: 15px;
             margin-top: 50px;
-            max-width: 1300px;
+            max-width: 1500px;
             margin-left: auto;
             margin-right: auto;
             justify-content: flex-start;
@@ -89,7 +89,7 @@
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1500px;
             margin: 30px auto;
             padding: 0 20px;
         }
@@ -855,6 +855,206 @@
         .btn-danger:hover {
             background: #f78989;
         }
+
+        /* --- 资源推荐页面样式 --- */
+        .resources-container-main {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+        .resources-sidebar {
+            flex: 0 0 240px;
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .resources-sidebar-item {
+            display: block;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: #444;
+            font-weight: 500;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease-in-out;
+        }
+        .resources-sidebar-item:last-child {
+            margin-bottom: 0;
+        }
+        .resources-sidebar-item:hover {
+            background: #f4f5f7;
+            color: #667eea;
+        }
+        .resources-sidebar-item.active {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+        .resources-content-list {
+            flex: 1;
+            min-width: 0;
+        }
+        .resource-category-content {
+            display: none;
+        }
+        .resource-category-content.active {
+            display: block;
+        }
+        .resource-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .resource-item {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            transition: all 0.2s;
+            border: 1px solid #f0f0f0;
+        }
+        .resource-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102,126,234,0.1);
+            border-color: #667eea40;
+        }
+        .resource-item img {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+        .resource-item .text-content {
+            flex: 1;
+        }
+        .resource-item .text-content a {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            text-decoration: none;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+        .resource-item .text-content a:hover {
+            color: #667eea;
+        }
+        .resource-item .text-content p {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin: 0;
+        }
+        .resources-leaderboard {
+            flex: 0 0 280px;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            align-self: flex-start; /* 保持在顶部 */
+        }
+        .leaderboard-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 18px;
+        }
+        .leaderboard-item:last-child { margin-bottom: 0; }
+        .leaderboard-rank {
+            font-size: 16px;
+            font-weight: bold;
+            color: #888;
+            width: 24px;
+            text-align: center;
+        }
+        .leaderboard-rank.top-1 { color: #FFD700; }
+        .leaderboard-rank.top-2 { color: #C0C0C0; }
+        .leaderboard-rank.top-3 { color: #CD7F32; }
+
+        .leaderboard-item img {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+        }
+        .leaderboard-item-info {
+             flex: 1;
+             min-width: 0;
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             gap: 10px;
+        }
+        .leaderboard-item-info a {
+            text-decoration: none;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .leaderboard-item-info a:hover { color: #667eea; }
+        .leaderboard-item-info .like-count-lb {
+            font-size: 12px;
+            color: #999;
+            flex-shrink: 0;
+        }
+
+        .like-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f5f7fa;
+            border-radius: 20px;
+            padding: 8px 16px;
+            border: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .like-container:hover {
+            background: #e9ecef;
+            transform: scale(1.05);
+        }
+        .like-container.liked {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+        .like-btn {
+            border: none;
+            background: none;
+            padding: 0;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+        }
+        .like-container.liked .like-btn {
+            filter: grayscale(100%) brightness(500%);
+        }
+        .like-count {
+            font-size: 14px;
+            font-weight: 600;
+            min-width: 16px;
+            text-align: center;
+        }
+
     </style>
 </head>
 <body>
@@ -870,6 +1070,7 @@
             <div class="nav-tab active" onclick="switchTab('classes')">📚 我的班级</div>
             <div class="nav-tab" onclick="switchTab('assignments')">📝 作业库</div>
             <div class="nav-tab" onclick="switchTab('feedback')">💡 意见反馈</div>
+            <div class="nav-tab" onclick="switchTab('resources')">🚀 资源推荐</div>
             <div id="adminTab" class="nav-tab" onclick="location.href='/admin/accounts'" style="display: none;">🔐 账号管理</div>
         </div>
     </div>
@@ -1047,6 +1248,279 @@
                 </div>
             </div>
         </div>
+
+        <!-- 资源推荐页面 -->
+        <div id="resourcesSection" style="display: none;">
+            <div class="section-title">
+                <h2>精选学习资源</h2>
+                <button class="btn" onclick="showAddResourceModal()">+ 添加新资源</button>
+            </div>
+            <div class="resources-container-main">
+                <div class="resources-sidebar">
+                    <a href="#" class="resources-sidebar-item active" onclick="switchResourceCategory(event, 'official')">🚀 Go官方核心</a>
+                    <a href="#" class="resources-sidebar-item" onclick="switchResourceCategory(event, 'practice')">🛠️ 实践与示例</a>
+                    <a href="#" class="resources-sidebar-item" onclick="switchResourceCategory(event, 'community')">📚 进阶与社区</a>
+                    <a href="#" class="resources-sidebar-item" onclick="switchResourceCategory(event, 'cs')">🎓 通用计算机</a>
+                </div>
+
+                <div class="resources-content-list">
+                    <div id="cat-official" class="resource-category-content active">
+                        <ul class="resource-list"></ul>
+                    </div>
+
+                    <div id="cat-practice" class="resource-category-content">
+                        <ul class="resource-list"></ul>
+                    </div>
+                    <div id="cat-community" class="resource-category-content">
+                        <ul class="resource-list"></ul>
+                    </div>
+                    <div id="cat-cs" class="resource-category-content">
+                        <ul class="resource-list"></ul>
+                    </div>
+                </div>
+
+                 <div class="resources-leaderboard">
+                    <h3 class="leaderboard-title">🏆 资源推荐榜</h3>
+                    <div id="leaderboard-list">
+                        <p style="color: #999; font-size: 13px;">正在加载排行榜...</p>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                // Flag to ensure initial load happens only once
+                let resourcesInitialLoad = false;
+
+                function showAddResourceModal() {
+                    document.getElementById('addResourceModal').style.display = 'flex';
+                }
+
+                function hideAddResourceModal() {
+                    document.getElementById('addResourceModal').style.display = 'none';
+                    // Clear form fields
+                    document.getElementById('newResourceTitle').value = '';
+                    document.getElementById('newResourceUrl').value = '';
+                    document.getElementById('newResourceDesc').value = '';
+                }
+
+                async function submitNewResource() {
+                    const title = document.getElementById('newResourceTitle').value;
+                    const url = document.getElementById('newResourceUrl').value;
+                    const description = document.getElementById('newResourceDesc').value;
+                    const category = document.getElementById('newResourceCategory').value;
+
+                    if (!title || !url || !category) {
+                        alert('标题、链接和分类是必填项！');
+                        return;
+                    }
+
+                    // Simple slug generation for ResourceID
+                    const resourceId = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+                    try {
+                        const res = await fetch('/api/resources', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-User-ID': userId,
+                                'X-User-Role': userRole
+                            },
+                            body: JSON.stringify({ 
+                                resourceId, 
+                                title, 
+                                url, 
+                                description, 
+                                category, 
+                                // Generate icon URL dynamically
+                                iconURL: `https://www.google.com/s2/favicons?sz=64&domain=${new URL(url).hostname}`
+                            })
+                        });
+
+                        if (res.ok) {
+                            alert('新资源添加成功！');
+                            hideAddResourceModal();
+                            loadResources(); // Refresh the entire resource list
+                        } else {
+                            const data = await res.json();
+                            alert('添加失败: ' + (data.error || '未知错误'));
+                        }
+                    } catch (e) {
+                        alert('网络请求失败: ' + e.message);
+                        console.error('Error submitting new resource:', e);
+                    }
+                }
+
+
+                // Main function to load and render all resources
+                async function loadResources() {
+                    try {
+                        const res = await fetch('/api/resources', {
+                             headers: { 'X-User-ID': userId, 'X-User-Role': userRole }
+                        });
+                        if (!res.ok) throw new Error(`获取资源失败: ${res.status}`);
+                        
+                        const resources = await res.json();
+
+                        // Clear all existing resource lists
+                        document.querySelectorAll('.resource-list').forEach(list => list.innerHTML = '');
+
+                        if (!resources || resources.length === 0) {
+                             document.querySelector('#cat-official .resource-list').innerHTML = '<p>暂无资源，快去添加吧！</p>';
+                             // Also clear leaderboard
+                             document.getElementById('leaderboard-list').innerHTML = '<p style="color: #999; font-size: 13px;">暂无推荐，快去点赞吧！</p>';
+                             return;
+                        }
+
+                        resources.forEach(resource => {
+                            const listContainer = document.querySelector(`#cat-${resource.category} .resource-list`);
+                            if (listContainer) {
+                                const resourceHTML = `
+                                    <li class="resource-item" data-resource-id="${resource.resourceId}">
+                                        <img src="${resource.iconURL || 'https://www.google.com/s2/favicons?sz=64&domain=go.dev'}" alt="${resource.title} icon">
+                                        <div class="text-content">
+                                            <a href="${resource.url}" target="_blank">${resource.title}</a>
+                                            <p>${resource.description || '暂无描述'}</p>
+                                        </div>
+                                        <div class="like-container" onclick="toggleLike(this, '${resource.resourceId}')">
+                                            <button class="like-btn">👍</button>
+                                            <span class="like-count">0</span>
+                                        </div>
+                                        <button class="btn btn-secondary delete-btn" style="padding: 8px 12px; font-size: 12px; background: #f8d7da; color: #721c24; border-color: #f5c6cb;" onclick="event.stopPropagation(); deleteResource('${resource.resourceId}')">🗑️</button>
+                                    </li>
+                                `;
+                                listContainer.insertAdjacentHTML('beforeend', resourceHTML);
+                            }
+                        });
+
+                        // After rendering all resources, load the stats (likes, leaderboard)
+                        loadResourceStats();
+
+                    } catch(e) {
+                        console.error("Failed to load resources:", e);
+                        document.querySelector('#cat-official .resource-list').innerHTML = `<p style="color:red;">加载资源失败: ${e.message}</p>`;
+                    }
+                }
+
+                async function loadResourceStats() {
+                    const leaderboardList = document.getElementById('leaderboard-list');
+                    try {
+                        const res = await fetch('/api/resources/stats', {
+                            headers: { 'X-User-ID': userId, 'X-User-Role': userRole }
+                        });
+                        if (!res.ok) throw new Error(`请求失败，状态码: ${res.status}`);
+
+                        const stats = await res.json();
+
+                        // Update like counts and states for all dynamically loaded cards
+                        document.querySelectorAll('.resource-item').forEach(item => {
+                            const resourceId = item.dataset.resourceId;
+                            if (!resourceId) return;
+
+                            const likeCount = stats.likeCounts[resourceId] || 0;
+                            const userLiked = stats.userLikes[resourceId] || false;
+
+                            const countElement = item.querySelector('.like-count');
+                            const containerElement = item.querySelector('.like-container');
+
+                            if (countElement) countElement.textContent = likeCount;
+                            if (containerElement) {
+                                containerElement.classList.toggle('liked', userLiked);
+                            }
+                        });
+
+                        // Update leaderboard - this part remains largely the same
+                        if (stats.leaderboard && stats.leaderboard.length > 0) {
+                            leaderboardList.innerHTML = stats.leaderboard.map((item, index) => {
+                                const resourceElement = document.querySelector(`.resource-item[data-resource-id='${item.resourceId}']`);
+                                if (!resourceElement) return ''; // If resource not on page, skip
+
+                                const title = resourceElement.querySelector('.text-content a').textContent;
+                                const href = resourceElement.querySelector('.text-content a').href;
+                                const iconSrc = resourceElement.querySelector('img').src;
+                                const rankClass = index < 3 ? `top-${index + 1}` : '';
+
+                                return `
+                                    <div class="leaderboard-item">
+                                        <span class="leaderboard-rank ${rankClass}">${index + 1}</span>
+                                        <img src="${iconSrc}" alt="Icon">
+                                        <div class="leaderboard-item-info">
+                                            <a href="${href}" target="_blank" title="${title}">${title}</a>
+                                            <div class="like-count-lb">👍 ${item.likeCount}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                        } else {
+                            leaderboardList.innerHTML = '<p style="color: #999; font-size: 13px;">暂无推荐，快去点赞吧！</p>';
+                        }
+
+                    } catch (error) {
+                        console.error('Error loading resource stats:', error);
+                        leaderboardList.innerHTML = `<p style="color: #dc3545; font-size: 13px; padding: 10px;">排行榜加载失败: ${error.message}</p>`;
+                    }
+                }
+
+                async function toggleLike(element, resourceId) {
+                    try {
+                        const res = await fetch(`/api/resources/${resourceId}/like`, {
+                            method: 'POST',
+                            headers: { 'X-User-ID': userId, 'X-User-Role': userRole }
+                        });
+
+                        if (!res.ok) throw new Error('Failed to toggle like');
+
+                        const result = await res.json();
+
+                        // Update UI based on the new state returned from the server
+                        const countElement = element.querySelector('.like-count');
+                        countElement.textContent = result.newCount;
+                        element.classList.toggle('liked', result.liked);
+                        
+                        // After liking, the leaderboard might change. Reload it after a short delay.
+                        setTimeout(loadResourceStats, 500);
+
+                    } catch (error) {
+                        console.error('Error toggling like:', error);
+                        alert('操作失败，请稍后重试。');
+                    }
+                }
+
+                function switchResourceCategory(event, category) {
+                    event.preventDefault();
+                    document.querySelectorAll('.resources-sidebar-item').forEach(item => item.classList.remove('active'));
+                    event.target.classList.add('active');
+                    document.querySelectorAll('.resource-category-content').forEach(content => content.classList.remove('active'));
+                    document.getElementById('cat-' + category).classList.add('active');
+                }
+
+                async function deleteResource(resourceId) {
+                    if (!confirm(`确定要删除这个资源吗？此操作不可撤销。`)) {
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch(`/api/resources/${resourceId}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'X-User-ID': userId,
+                                'X-User-Role': userRole
+                            }
+                        });
+
+                        if (res.ok) {
+                            alert('资源删除成功！');
+                            loadResources(); // Refresh the list
+                        } else {
+                            const data = await res.json();
+                            alert('删除失败: ' + (data.error || '未知错误'));
+                        }
+                    } catch (e) {
+                        alert('网络请求失败: ' + e.message);
+                        console.error('Error deleting resource:', e);
+                    }
+                }
+            </script>
+        </div>
     </div>
 
     <!-- 创建班级弹窗 -->
@@ -1147,6 +1621,7 @@
     </div>
     
     <script>
+        let resourcesLoaded = false;
         // 获取用户信息
         const userId = sessionStorage.getItem('user_id');
         const userName = sessionStorage.getItem('user_name');
@@ -1749,7 +2224,8 @@
                 t.classList.remove('active');
                 if ((tab === 'classes' && index === 0) ||
                     (tab === 'assignments' && index === 1) ||
-                    (tab === 'feedback' && index === 2)) {
+                    (tab === 'feedback' && index === 2) ||
+                    (tab === 'resources' && index === 3)) { // 增加对新Tab的支持
                     t.classList.add('active');
                 }
             });
@@ -1757,6 +2233,7 @@
             document.getElementById('classesSection').style.display = tab === 'classes' ? 'block' : 'none';
             document.getElementById('assignmentsSection').style.display = tab === 'assignments' ? 'block' : 'none';
             document.getElementById('feedbackSection').style.display = tab === 'feedback' ? 'block' : 'none';
+            document.getElementById('resourcesSection').style.display = tab === 'resources' ? 'block' : 'none'; // 增加对新区域的显示/隐藏
             
             // 切换到对应标签页时，重新加载数据
             if (tab === 'classes') {
@@ -1765,6 +2242,12 @@
                 loadAssignments();
             } else if (tab === 'feedback') {
                 window.FeedbackController?.loadFeedbacks();
+            } else if (tab === 'resources') {
+                // Only load resources on the first time the tab is clicked
+                if (!resourcesInitialLoad) {
+                    loadResources(); // This will also trigger loadResourceStats
+                    resourcesInitialLoad = true;
+                }
             }
             
             const url = new URL(window.location);
@@ -2058,6 +2541,38 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary btn-sm" onclick="document.getElementById('analysisModal').style.display = 'none'">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加新资源弹窗 -->
+    <div id="addResourceModal" class="modal">
+        <div class="modal-content">
+            <h3>添加新资源</h3>
+            <div class="form-group">
+                <label>资源标题</label>
+                <input type="text" id="newResourceTitle" placeholder="例如：Go语言圣经">
+            </div>
+            <div class="form-group">
+                <label>资源链接 (URL)</label>
+                <input type="text" id="newResourceUrl" placeholder="https://gopl-zh.github.io/">
+            </div>
+            <div class="form-group">
+                <label>资源描述</label>
+                <input type="text" id="newResourceDesc" placeholder="对资源的简短介绍">
+            </div>
+            <div class="form-group">
+                <label>资源分类</label>
+                <select id="newResourceCategory">
+                    <option value="official">Go官方核心</option>
+                    <option value="practice">实践与示例</option>
+                    <option value="community">进阶与社区</option>
+                    <option value="cs">通用计算机</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn" onclick="submitNewResource()">确认添加</button>
+                <button class="btn btn-secondary" onclick="hideAddResourceModal()">取消</button>
             </div>
         </div>
     </div>

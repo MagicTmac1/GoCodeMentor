@@ -133,3 +133,21 @@ type FeedbackRepository interface {
 	// Delete 根据 ID 删除反馈
 	Delete(id uint) error
 }
+
+// IResourceRepository defines the interface for resource data operations.
+type IResourceRepository interface {
+	// ToggleLike 切换用户对资源的喜欢状态（点赞/取消点赞）
+	ToggleLike(userID, resourceID string) (bool, error)
+	// GetLikesByResourceIDs 根据资源 ID 列表获取每个资源的被点赞次数
+	GetLikesByResourceIDs(resourceIDs []string) (map[string]int64, error)
+	// GetUserLikes 获取指定用户在给定资源列表中的点赞状态
+	GetUserLikes(userID string, resourceIDs []string) (map[string]bool, error)
+	// GetLeaderboard 获取点赞排行榜
+	GetLeaderboard() ([]model.LeaderboardItem, error)
+	// CreateResource 创建一个新资源
+	CreateResource(resource *model.Resource) error
+	// GetAllResources 获取所有资源
+	GetAllResources() ([]model.Resource, error)
+	// DeleteResource deletes a resource by its ID
+	DeleteResource(resourceID string) error
+}

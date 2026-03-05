@@ -90,15 +90,58 @@ func InitDB() (*gorm.DB, error) {
 		&model.Submission{},
 		&model.Feedback{},
 		&model.AssignmentClass{},
+		&model.ResourceLike{}, // 新增资源点赞模型
+		&model.Resource{},
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	// 初始化推荐资源数据
+	seedInitialResources(db)
+
 	// 初始化管理员账号
 	initAdminUser(db)
 
 	return db, nil
+}
+
+// seedInitialResources seeds the database with a predefined list of resources
+// if the resources table is empty.
+func seedInitialResources(db *gorm.DB) {
+	resources := []model.Resource{
+		// Official
+		{ResourceID: "go-tour", Title: "A Tour of Go", URL: "https://go.dev/tour/", Description: "官方的 Go 语言入门教程，通过在线编程环境交互式学习，是入门首选。", Category: "official", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=go.dev"},
+		{ResourceID: "go-doc", Title: "Go Documentation", URL: "https://go.dev/doc/", Description: "最权威的 Go 语言官方文档，包含语言规范、标准库和工具文档。", Category: "official", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=go.dev"},
+		{ResourceID: "go-blog", Title: "The Go Blog", URL: "https://go.dev/blog/", Description: "Go 团队官方博客，发布关于语言更新、最佳实践和内部实现的深度文章。", Category: "official", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=go.dev"},
+
+		// Practice
+		{ResourceID: "awesome-go", Title: "Awesome Go", URL: "https://github.com/avelino/awesome-go", Description: "一个由社区维护的、非常全面的Go语言框架、库和软件列表，是探索Go生态的绝佳入口。", Category: "practice", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=github.com"},
+		{ResourceID: "project-layout", Title: "Standard Go Project Layout", URL: "https://github.com/golang-standards/project-layout", Description: "Go应用程序的通用项目结构布局模板，提供了一套推荐的目录组织方式。", Category: "practice", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=github.com"},
+		{ResourceID: "gin-web-framework", Title: "Gin Web Framework", URL: "https://github.com/gin-gonic/gin", Description: "一个高性能的Go Web框架，以其Radix树路由和中间件支持而闻名，本项目就使用了该框架。", Category: "practice", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=github.com"},
+		{ResourceID: "gorm", Title: "GORM", URL: "https://github.com/go-gorm/gorm", Description: "Go 语言中最受欢迎的 ORM 库之一，提供了强大且易于使用的 API 来操作数据库。", Category: "practice", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=github.com"},
+		{ResourceID: "cobra", Title: "Cobra", URL: "https://github.com/spf13/cobra", Description: "一个用于创建强大的现代CLI应用程序的库，被许多知名项目（如Kubernetes）使用。", Category: "practice", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=github.com"},
+
+		// Community
+		{ResourceID: "dave-cheney-blog", Title: "Dave Cheney's Blog", URL: "https://dave.cheney.net/", Description: "Go语言核心贡献者之一的博客，包含大量关于Go性能、设计和最佳实践的深度好文。", Category: "community", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=dave.cheney.net"},
+		{ResourceID: "studygolang", Title: "Go语言中文网", URL: "https://studygolang.com/", Description: "国内最活跃的Go语言社区之一，提供新闻、教程、招聘信息和活跃的论坛。", Category: "community", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=studygolang.com"},
+		{ResourceID: "go-by-example", Title: "Go by Example", URL: "https://gobyexample.com/", Description: "通过简洁、带注释的示例代码来学习Go语言的网站，非常适合快速查阅。", Category: "community", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=gobyexample.com"},
+		{ResourceID: "ardan-labs-blog", Title: "Ardan Labs Blog", URL: "https://www.ardanlabs.com/blog/", Description: "由知名Go培训机构Ardan Labs维护的博客，内容深入且专业，适合进阶学习。", Category: "community", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=ardanlabs.com"},
+
+		// CS
+		{ResourceID: "system-design-primer", Title: "System Design Primer", URL: "https://github.com/donnemartin/system-design-primer", Description: "系统设计的终极指南。学习如何设计可扩展、高可用的系统，是后端工程师的必读材料。", Category: "cs", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=github.com"},
+		{ResourceID: "missing-semester", Title: "The Missing Semester of Your CS Education", URL: "https://missing.csail.mit.edu/", Description: "MIT开设的“计算机教育中缺失的一课”，涵盖命令行、Vim、Git等程序员必备的强大工具。", Category: "cs", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=missing.csail.mit.edu"},
+		{ResourceID: "build-your-own-x", Title: "Build your own X", URL: "https://github.com/codecrafters-io/build-your-own-x", Description: "一个通过从零开始构建技术（如数据库、Git、Docker）来学习的绝佳项目集合。", Category: "cs", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=github.com"},
+		{ResourceID: "developer-roadmap", Title: "Developer Roadmap", URL: "https://roadmap.sh/", Description: "为开发者提供的技能树和学习路线图，涵盖前后端、DevOps等多个方向。", Category: "cs", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=roadmap.sh"},
+	}
+
+	for _, r := range resources {
+		// Use FirstOrCreate with Assign to ensure data is always up-to-date with the code definition.
+		// This will create the resource if it doesn't exist, or update it if it does.
+		if err := db.Where(model.Resource{ResourceID: r.ResourceID}).Assign(r).FirstOrCreate(&model.Resource{}).Error; err != nil {
+			log.Printf("Failed to seed resource %s: %v", r.Title, err)
+		}
+	}
 }
 
 func initAdminUser(db *gorm.DB) {

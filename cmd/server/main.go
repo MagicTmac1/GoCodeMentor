@@ -112,6 +112,7 @@ func main() {
 
 	// 2. 初始化 Repositories
 	repos := repository.NewRepositories(db)
+	resourceRepo := repository.NewResourceRepository(db)
 
 	// 3. 初始化 Services
 	client := siliconflow.NewClient()
@@ -119,13 +120,14 @@ func main() {
 	classSvc := service.NewClassService(repos.ClassRepo, repos.UserRepo, repos.AssignmentRepo, repos.SubmissionRepo, client)
 	assignSvc := service.NewAssignmentService(repos.AssignmentRepo, repos.AssignmentClassRepo, repos.QuestionRepo, repos.SubmissionRepo, repos.UserRepo, repos.ClassRepo, client)
 	feedbackSvc := service.NewFeedbackService(repos.FeedbackRepo)
+	resourceSvc := service.NewResourceService(resourceRepo)
 	sessionSvc := service.NewSessionService(client, repos.SessionRepo, repos.MessageRepo, repos.UserRepo, repos.ClassRepo)
 
 	// 4. 初始化 Handlers
 	userHandler := handler.NewUserHandler(userSvc)
 	classHandler := handler.NewClassHandler(classSvc, userSvc, assignSvc)
 	assignmentHandler := handler.NewAssignmentHandler(assignSvc, userSvc)
-	feedbackHandler := handler.NewFeedbackHandler(feedbackSvc)
+	feedbackHandler := handler.NewFeedbackHandler(feedbackSvc, resourceSvc)
 	sessionHandler := handler.NewSessionHandler(sessionSvc)
 	pageHandler := handler.NewPageHandler()
 	excelHandler := handler.NewExcelHandler(classSvc, userSvc)
