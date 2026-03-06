@@ -1067,7 +1067,8 @@
             </div>
         </div>
         <div class="nav-tabs">
-            <div class="nav-tab active" onclick="switchTab('classes')">📚 我的班级</div>
+            <div class="nav-tab active" onclick="switchTab('course-details')">📖 课程详情</div>
+            <div class="nav-tab" onclick="switchTab('classes')">📚 我的班级</div>
             <div class="nav-tab" onclick="switchTab('assignments')">📝 作业库</div>
             <div class="nav-tab" onclick="switchTab('feedback')">💡 意见反馈</div>
             <div class="nav-tab" onclick="switchTab('resources')">🚀 资源推荐</div>
@@ -1076,8 +1077,11 @@
     </div>
 
     <div class="container">
+        {{template "_course_details.html" .}}
+
+
         <!-- 班级列表页面 -->
-        <div id="classesSection">
+        <div id="classesSection" style="display: none;">
             <div class="section-title">
                 <h2>我的班级</h2>
                 <div style="position: relative; display: inline-block;">
@@ -1140,114 +1144,8 @@
             </div>
         </div>
 
-        <!-- 意见反馈页面 - 完整集成feedback.js -->
-        <div id="feedbackSection" style="display: none;">
-            <div id="feedbackDetailModal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
-                <div class="modal-content" style="background: white; border-radius: 16px; width: 90%; max-width: 650px; padding: 0; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
-                    <div style="padding: 20px 30px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-                        <h2 style="margin: 0; font-size: 20px; color: #333;">反馈详情</h2>
-                        <span id="closeDetailModalBtn" style="cursor: pointer; font-size: 24px; color: #999;" onmouseover="this.style.color='#666'" onmouseout="this.style.color='#999'">&times;</span>
-                    </div>
-                    <div id="detailModalContent" style="padding: 30px; max-height: 70vh; overflow-y: auto;">
-                        <!-- 内容由 JS 动态生成 -->
-                    </div>
-                </div>
-            </div>
-            <div class="section-title">
-                <h2>意见反馈</h2>
-                <div style="display: flex; gap: 12px;">
-                    <button id="teacher-new-feedback-btn" class="btn" style="padding: 14px 28px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);" onclick="window.FeedbackController?.showFeedbackForm()">
-                        📝 发布反馈
-                    </button>
-                </div>
-            </div>
-            
-            <!-- 统计卡片区域 -->
-            <div id="feedbackStats" class="feedback-stats">
-                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({type: '', status: '', search: ''})">
-                    <div class="stat-label">总反馈数</div>
-                    <div id="total-feedbacks" class="stat-value" style="color: #667eea;">0</div>
-                </div>
-                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({status: 'pending'})">
-                    <div class="stat-label">待处理</div>
-                    <div id="pending-feedbacks" class="stat-value" style="color: #e6a23c;">0</div>
-                </div>
-                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({status: 'resolved'})">
-                    <div class="stat-label">已解决</div>
-                    <div id="resolved-feedbacks" class="stat-value" style="color: #67c23a;">0</div>
-                </div>
-                <div class="feedback-stat-card" style="cursor: pointer;" onclick="window.FeedbackController?.loadFeedbacks({search: sessionStorage.getItem('user_id')})">
-                    <div class="stat-label">我的反馈</div>
-                    <div id="my-feedbacks" class="stat-value" style="color: #409eff;">0</div>
-                </div>
-            </div>
+        {{template "_feedback_section.html" .}}
 
-            <!-- 过滤栏 -->
-            <div class="feedback-filter-bar">
-                <div class="feedback-filter-item">
-                    <label>类型：</label>
-                    <select id="filter-type" class="feedback-filter" name="type">
-                        <option value="">全部类型</option>
-                        <option value="bug">🐛 Bug报告</option>
-                        <option value="feature">✨ 功能建议</option>
-                        <option value="praise">👍 点赞表扬</option>
-                        <option value="suggestion">💡 学习建议</option>
-                        <option value="question">❓ 问题咨询</option>
-                        <option value="other">📝 其他</option>
-                    </select>
-                </div>
-                <div class="feedback-filter-item">
-                    <label>状态：</label>
-                    <select id="filter-status" class="feedback-filter" name="status">
-                        <option value="">全部状态</option>
-                        <option value="pending">待处理</option>
-                        <option value="processing">处理中</option>
-                        <option value="resolved">已解决</option>
-                        <option value="closed">已关闭</option>
-                    </select>
-                </div>
-                <div class="feedback-filter-item" style="flex: 1;">
-                    <input type="text" id="search-feedback" placeholder="🔍 搜索反馈标题..." style="flex: 1;">
-                    <button id="search-btn">搜索</button>
-                </div>
-            </div>
-
-            <!-- 发布表单 -->
-            <div id="feedbackForm" style="display: none; background: white; padding: 25px; border-radius: 16px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border: 1px solid #f0f0f0;">
-                <h3 style="margin-bottom: 20px; color: #333; font-size: 18px;">✏️ 发布新反馈</h3>
-                <div style="margin-bottom: 18px;">
-                    <label style="display: block; margin-bottom: 6px; color: #555; font-size: 14px; font-weight: 500;">反馈类型</label>
-                    <select id="fbType" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; background: #fafafa;">
-                        <option value="bug">🐛 Bug报告</option>
-                        <option value="feature">✨ 功能建议</option>
-                        <option value="praise">👍 点赞表扬</option>
-                        <option value="suggestion">💡 学习建议</option>
-                        <option value="question">❓ 问题咨询</option>
-                        <option value="other">📝 其他</option>
-                    </select>
-                </div>
-                <div style="margin-bottom: 18px;">
-                    <label style="display: block; margin-bottom: 6px; color: #555; font-size: 14px; font-weight: 500;">标题</label>
-                    <input type="text" id="fbTitle" placeholder="请简短描述你的反馈" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 6px; color: #555; font-size: 14px; font-weight: 500;">详细内容</label>
-                    <textarea id="fbContent" placeholder="请详细描述你的问题或建议..." style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; height: 120px; font-size: 14px; resize: vertical;"></textarea>
-                </div>
-                <div style="display: flex; gap: 12px;">
-                    <button onclick="window.FeedbackController?.submitFeedback()" class="btn" style="padding: 10px 24px;">🚀 匿名发布</button>
-                    <button onclick="window.FeedbackController?.hideFeedbackForm()" class="btn btn-secondary" style="padding: 10px 24px;">取消</button>
-                </div>
-            </div>
-
-            <!-- 反馈列表容器 -->
-            <div id="feedback-list">
-                <div style="text-align: center; padding: 40px; color: #999;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
-                    <h3 style="font-size: 18px; margin-bottom: 8px; color: #666;">加载中...</h3>
-                </div>
-            </div>
-        </div>
 
         <!-- 资源推荐页面 -->
         <div id="resourcesSection" style="display: none;">
@@ -1717,8 +1615,23 @@
 
         // 检查登录状态
         if (!userId || (userRole !== 'teacher' && userRole !== 'admin')) {
-            window.location.href = '/login';
-            throw new Error('Redirecting to login...'); // 停止后续脚本执行
+            document.body.innerHTML = `
+                <div style="padding: 50px; text-align: center; font-family: sans-serif; background: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+                    <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                        <h2 style="color: #dc3545; margin-bottom: 20px;">会话冲突</h2>
+                        <p style="font-size: 16px; color: #333; line-height: 1.8;">
+                            检测到您的登录角色（学生）与当前页面（教师工作台）不符。<br>
+                            这通常是因为您在同一个浏览器的另一个标签页中登录了学生账号。
+                        </p>
+                        <p style="font-size: 14px; color: #666; margin-top: 25px;">
+                            <strong>解决方案：</strong><br>
+                            请使用<strong>不同的浏览器</strong> (例如，一个用Chrome，一个用Edge)，<br>或在当前浏览器的<strong>“无痕/隐私模式”</strong>下登录另一个角色的账号。
+                        </p>
+                        <a href="/login" style="display: inline-block; margin-top: 30px; padding: 12px 24px; background: #007bff; color: white; text-decoration: none; border-radius: 8px; font-weight: 500;">返回登录页面</a>
+                    </div>
+                </div>
+            `;
+            throw new Error('Session conflict detected. Halting script execution.'); // 停止后续脚本执行
         }
 
         // 管理员权限特殊处理
@@ -2220,16 +2133,11 @@
 
         // 切换标签页
         function switchTab(tab) {
-            document.querySelectorAll('.nav-tab').forEach((t, index) => {
-                t.classList.remove('active');
-                if ((tab === 'classes' && index === 0) ||
-                    (tab === 'assignments' && index === 1) ||
-                    (tab === 'feedback' && index === 2) ||
-                    (tab === 'resources' && index === 3)) { // 增加对新Tab的支持
-                    t.classList.add('active');
-                }
-            });
-            
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            const tabElement = Array.from(document.querySelectorAll('.nav-tab')).find(t => t.getAttribute('onclick').includes(`'${tab}'`));
+            if (tabElement) tabElement.classList.add('active');
+
+            document.getElementById('courseDetailsSection').style.display = tab === 'course-details' ? 'block' : 'none';
             document.getElementById('classesSection').style.display = tab === 'classes' ? 'block' : 'none';
             document.getElementById('assignmentsSection').style.display = tab === 'assignments' ? 'block' : 'none';
             document.getElementById('feedbackSection').style.display = tab === 'feedback' ? 'block' : 'none';
@@ -2260,16 +2168,14 @@
         }
         
         const urlParams = new URLSearchParams(window.location.search);
-        let defaultTab = urlParams.get('tab') || 'classes';
+        let defaultTab = urlParams.get('tab') || 'course-details';
         
         // 管理员默认进入反馈页
-        if (userRole === 'admin' && (defaultTab === 'classes' || defaultTab === 'assignments')) {
+        if (userRole === 'admin' && (defaultTab === 'classes' || defaultTab === 'assignments' || defaultTab === 'course-details')) {
             defaultTab = 'feedback';
         }
 
-        if (defaultTab !== 'classes') {
-            switchTab(defaultTab);
-        }
+        switchTab(defaultTab);
 
         // 加载作业列表
         async function loadAssignments() {

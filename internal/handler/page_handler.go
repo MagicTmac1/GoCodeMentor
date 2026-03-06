@@ -34,9 +34,13 @@ func (h *PageHandler) IndexPage(c *gin.Context) {
 
 	switch userRole {
 	case "teacher", "admin":
-		c.File("web/templates/teacher_dashboard.html")
+		c.HTML(http.StatusOK, "teacher_dashboard.html", gin.H{
+			"UserRole": userRole,
+		})
 	case "student":
-		c.File("web/templates/student_dashboard.html")
+		c.HTML(http.StatusOK, "student_dashboard.html", gin.H{
+			"UserRole": userRole,
+		})
 	default:
 		c.Redirect(http.StatusFound, "/login")
 	}
