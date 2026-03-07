@@ -127,10 +127,12 @@ func main() {
 	userHandler := handler.NewUserHandler(userSvc)
 	classHandler := handler.NewClassHandler(classSvc, userSvc, assignSvc)
 	assignmentHandler := handler.NewAssignmentHandler(assignSvc, userSvc)
-	feedbackHandler := handler.NewFeedbackHandler(feedbackSvc, resourceSvc)
+	feedbackHandler := handler.NewFeedbackHandler(feedbackSvc)
+	resourceHandler := handler.NewResourceHandler(resourceSvc)
 	sessionHandler := handler.NewSessionHandler(sessionSvc)
 	pageHandler := handler.NewPageHandler()
 	excelHandler := handler.NewExcelHandler(classSvc, userSvc)
+	wisdomGraphHandler := handler.NewWisdomGraphHandler(db)
 
 	// 5. 初始化 Gin 引擎并设置路由
 	r := gin.Default()
@@ -140,9 +142,11 @@ func main() {
 		classHandler,
 		assignmentHandler,
 		feedbackHandler,
+		resourceHandler,
 		sessionHandler,
 		pageHandler,
 		excelHandler,
+		wisdomGraphHandler,
 		AuthMiddleware(),
 		TeacherAuthMiddleware(),
 		AdminAuthMiddleware(),

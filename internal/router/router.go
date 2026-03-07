@@ -12,9 +12,11 @@ func Setup(
 	classHandler *handler.ClassHandler,
 	assignmentHandler *handler.AssignmentHandler,
 	feedbackHandler *handler.FeedbackHandler,
+	resourceHandler *handler.ResourceHandler,
 	sessionHandler *handler.SessionHandler,
 	pageHandler *handler.PageHandler,
 	excelHandler *handler.ExcelHandler,
+	wisdomGraphHandler *handler.WisdomGraphHandler,
 	authMiddleware gin.HandlerFunc,
 	teacherAuthMiddleware gin.HandlerFunc,
 	adminAuthMiddleware gin.HandlerFunc,
@@ -66,6 +68,9 @@ func Setup(
 		api.POST("/chat", sessionHandler.Chat)
 		api.GET("/history", sessionHandler.GetHistory)
 		api.GET("/sessions", sessionHandler.GetUserSessions)
+
+		// Wisdom Graph
+		api.GET("/wisdom-graph", wisdomGraphHandler.GetWisdomGraph)
 
 		// Admin APIs
 		api.GET("/admin/users", adminAuthMiddleware, userHandler.GetAllUsers)
@@ -122,11 +127,11 @@ func Setup(
 		api.DELETE("/feedback/:id", feedbackHandler.DeleteFeedback)
 
 		// Resource routes
-		api.GET("/resources", feedbackHandler.GetAllResources)               // Get all resources
-		api.POST("/resources", feedbackHandler.CreateResource)               // Create a new resource
-		api.DELETE("/resources/:resourceId", feedbackHandler.DeleteResource) // Delete a resource
-		api.GET("/resources/stats", feedbackHandler.GetResourceStats)
-		api.POST("/resources/:resourceId/like", feedbackHandler.ToggleResourceLike)
+		api.GET("/resources", resourceHandler.GetAllResources)               // Get all resources
+		api.POST("/resources", resourceHandler.CreateResource)               // Create a new resource
+		api.DELETE("/resources/:resourceId", resourceHandler.DeleteResource) // Delete a resource
+		api.GET("/resources/stats", resourceHandler.GetResourceStats)
+		api.POST("/resources/:resourceId/like", resourceHandler.ToggleResourceLike)
 
 		// Excel templates and imports
 		api.GET("/templates/students", teacherAuthMiddleware, excelHandler.DownloadStudentTemplate)

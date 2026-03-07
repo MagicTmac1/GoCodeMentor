@@ -124,9 +124,19 @@ func (h *AssignmentHandler) PublishAssignment(c *gin.Context) {
 		return
 	}
 
-	deadlineTime, err := time.Parse("2006-01-02", req.Deadline)
+	// 尝试解析多种常见的日期格式
+	formats := []string{"2006-01-02", "2006/01/02"}
+	var deadlineTime time.Time
+
+	for _, format := range formats {
+		deadlineTime, err = time.Parse(format, req.Deadline)
+		if err == nil {
+			break // 解析成功，跳出循环
+		}
+	}
+
 	if err != nil {
-		c.JSON(400, gin.H{"error": "截止时间格式错误，请使用YYYY-MM-DD格式"})
+		c.JSON(400, gin.H{"error": "截止时间格式无法识别，请使用YYYY-MM-DD或YYYY/MM/DD格式"})
 		return
 	}
 

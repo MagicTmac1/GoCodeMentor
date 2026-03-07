@@ -42,7 +42,7 @@ func (c *Client) Chat(ctx context.Context, systemPrompt, userMessage string) (st
 	return c.ChatCompletion(ctx, userMessage, nil)
 }
 
-// ChatCompletion AI对话补全（兼容旧接口）
+// ChatCompletion is deprecated, use ChatWithHistory instead.
 func (c *Client) ChatCompletion(ctx context.Context, prompt string, messages []Message) (string, error) {
 	// 构建消息列表
 	var openaiMessages []openai.ChatCompletionMessage
@@ -64,8 +64,9 @@ func (c *Client) ChatCompletion(ctx context.Context, prompt string, messages []M
 	})
 
 	resp, err := c.cli.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model:    c.model,
-		Messages: openaiMessages,
+		Model:      c.model,
+		Messages:   openaiMessages,
+		MaxTokens:  4096, // 增加 token 限制
 	})
 	if err != nil {
 		return "", err
@@ -124,8 +125,9 @@ func (c *Client) ChatWithHistory(ctx context.Context, messages []Message) (strin
 	}
 
 	resp, err := c.cli.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model:    c.model,
-		Messages: openaiMessages,
+		Model:      c.model,
+		Messages:   openaiMessages,
+		MaxTokens:  4096, // 增加 token 限制
 	})
 	if err != nil {
 		return "", err

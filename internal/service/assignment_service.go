@@ -120,7 +120,7 @@ func (s *AssignmentService) GenerateAssignmentByAI(ctx context.Context, topic st
 			Type    string      `json:"type"`
 			Content string      `json:"content"`
 			Options interface{} `json:"options"`
-			Answer  string      `json:"answer"`
+			Answer  interface{} `json:"answer"` // 允许 answer 是字符串或数组
 			Score   int         `json:"score"`
 		} `json:"questions"`
 	}
@@ -162,12 +162,29 @@ func (s *AssignmentService) GenerateAssignmentByAI(ctx context.Context, topic st
 			}
 		}
 
+		var answerContent string
+		switch v := q.Answer.(type) {
+		case string:
+			answerContent = v
+		case []interface{}:
+			var lines []string
+			for _, line := range v {
+				if str, ok := line.(string); ok {
+					lines = append(lines, str)
+				}
+			}
+			answerContent = strings.Join(lines, "\n")
+		default:
+			log.Printf("警告：未知的答案类型: %T", v)
+			answerContent = fmt.Sprintf("%v", v)
+		}
+
 		question := &model.Question{
 			ID:           uuid.New().String(),
 			AssignmentID: assign.ID,
 			Type:         q.Type,
 			Content:      q.Content,
-			Answer:       q.Answer,
+			Answer:       answerContent,
 			Options:      optionsJSON,
 			Score:        q.Score,
 			OrderNum:     i + 1,
@@ -192,23 +209,29 @@ func (s *AssignmentService) GetAssignmentsByClass(classID string) ([]model.Assig
 
 // PublishAssignment 发布作业到班级
 func (s *AssignmentService) PublishAssignment(assignID string, classID string, deadline *time.Time) error {
-	// 获取作业
+	// 检查作业是否存在
 	assign, err := s.assignRepo.GetByID(assignID)
 	if err != nil {
-		return err
+		return fmt.Errorf("作业不存在: %w", err)
+	}
+
+	// 检查班级是否存在
+	_, err = s.classRepo.GetByID(classID)
+	if err != nil {
+		return fmt.Errorf("班级不存在: %w", err)
 	}
 
 	// 检查是否已发布到该班级
 	existing, err := s.assignmentClassRepo.GetByAssignmentAndClass(assignID, classID)
+	// 如果记录已存在，则只更新截止日期
 	if err == nil && existing != nil {
-		// 更新现有的发布记录截止时间
 		existing.Deadline = deadline
 		return s.assignmentClassRepo.Update(existing)
 	}
 
-	// 创建作业-班级关联记录
+	// 如果记录不存在，则创建新的发布记录
 	now := time.Now()
-	assignmentClass := &model.AssignmentClass{
+	newAssignmentClass := &model.AssignmentClass{
 		ID:           uuid.New().String(),
 		AssignmentID: assignID,
 		ClassID:      classID,
@@ -217,16 +240,21 @@ func (s *AssignmentService) PublishAssignment(assignID string, classID string, d
 		CreatedAt:    now,
 	}
 
-	// 如果作业状态是草稿，更新为已发布
+	if err := s.assignmentClassRepo.Create(newAssignmentClass); err != nil {
+		return fmt.Errorf("创建发布记录失败: %w", err)
+	}
+
+	// 如果作业当前是草稿状态，则更新为已发布
 	if assign.Status == "draft" {
 		assign.Status = "published"
 		assign.UpdatedAt = time.Now()
 		if err := s.assignRepo.Update(assign); err != nil {
-			return err
+			// 如果这里失败，可以选择回滚上面的创建操作，但为简化，我们先只记录错误
+			log.Printf("警告: 更新作业 '%s' 状态为 'published' 失败: %v", assignID, err)
 		}
 	}
 
-	return s.assignmentClassRepo.Create(assignmentClass)
+	return nil
 }
 
 // GetAssignmentDetail 获取作业详情

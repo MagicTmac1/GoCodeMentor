@@ -1,74 +1,20 @@
 package handler
 
 import (
-	"GoCodeMentor/internal/dto"
 	"GoCodeMentor/internal/service"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-// --- Resource Routes ---
-
-// GetAllResources handles the request to get all resources.
-func (h *FeedbackHandler) GetAllResources(c *gin.Context) {
-	resources, err := h.resourceSvc.GetAllResources()
-	if err != nil {
-		c.JSON(500, gin.H{"error": "获取资源列表失败: " + err.Error()})
-		return
-	}
-	c.JSON(200, resources)
-}
-
-// CreateResource handles the request to create a new resource.
-func (h *FeedbackHandler) CreateResource(c *gin.Context) {
-	var req dto.CreateResourceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": "无效的请求参数: " + err.Error()})
-		return
-	}
-
-	// Here you could add more validation or generate a resource ID if needed
-	// For example, using a slug from the title or a UUID.
-	// For now, we assume the frontend provides a unique ResourceID.
-
-	createdResource, err := h.resourceSvc.CreateResource(&req)
-	if err != nil {
-		c.JSON(500, gin.H{"error": "创建资源失败: " + err.Error()})
-		return
-	}
-
-	c.JSON(201, createdResource)
-}
-
-// DeleteResource handles the request to delete a resource.
-func (h *FeedbackHandler) DeleteResource(c *gin.Context) {
-	resourceID := c.Param("resourceId")
-	if resourceID == "" {
-		c.JSON(400, gin.H{"error": "无效的资源ID"})
-		return
-	}
-
-	// In a real-world scenario, you'd check for user permissions here.
-	// For now, we allow any authenticated user to delete.
-
-	if err := h.resourceSvc.DeleteResource(resourceID); err != nil {
-		c.JSON(500, gin.H{"error": "删除资源失败: " + err.Error()})
-		return
-	}
-
-	c.JSON(200, gin.H{"message": "资源删除成功"})
-}
-
 // FeedbackHandler handles feedback-related requests.
 type FeedbackHandler struct {
 	feedbackSvc service.IFeedbackService
-	resourceSvc service.IResourceService
 }
 
 // NewFeedbackHandler creates a new FeedbackHandler.
-func NewFeedbackHandler(feedbackSvc service.IFeedbackService, resourceSvc service.IResourceService) *FeedbackHandler {
-	return &FeedbackHandler{feedbackSvc: feedbackSvc, resourceSvc: resourceSvc}
+func NewFeedbackHandler(feedbackSvc service.IFeedbackService) *FeedbackHandler {
+	return &FeedbackHandler{feedbackSvc: feedbackSvc}
 }
 
 // CreateFeedback handles the creation of a new feedback.
@@ -245,40 +191,4 @@ func (h *FeedbackHandler) DeleteFeedback(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{"message": "反馈删除成功"})
-}
-
-// --- Resource Routes ---
-
-// GetResourceStats handles the request to get all stats for the resource page.
-func (h *FeedbackHandler) GetResourceStats(c *gin.Context) {
-	userID := c.GetString("userID")
-	stats, err := h.resourceSvc.GetResourceStats(userID)
-	if err != nil {
-		c.JSON(500, gin.H{"error": "获取资源数据失败: " + err.Error()})
-		return
-	}
-	c.JSON(200, stats)
-}
-
-// ToggleResourceLike handles the request to like/unlike a resource.
-func (h *FeedbackHandler) ToggleResourceLike(c *gin.Context) {
-	userID := c.GetString("userID")
-	resourceID := c.Param("resourceId")
-
-	if resourceID == "" {
-		c.JSON(400, gin.H{"error": "无效的资源ID"})
-		return
-	}
-
-	liked, newCount, err := h.resourceSvc.ToggleLike(userID, resourceID)
-	if err != nil {
-		c.JSON(500, gin.H{"error": "操作失败: " + err.Error()})
-		return
-	}
-
-	c.JSON(200, gin.H{
-		"resourceId": resourceID,
-		"liked":      liked,
-		"newCount":   newCount,
-	})
 }

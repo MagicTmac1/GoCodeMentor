@@ -92,6 +92,8 @@ func InitDB() (*gorm.DB, error) {
 		&model.AssignmentClass{},
 		&model.ResourceLike{}, // 新增资源点赞模型
 		&model.Resource{},
+		&model.KnowledgePoint{},
+		&model.KnowledgePointCategory{},
 	)
 	if err != nil {
 		return nil, err
@@ -99,6 +101,9 @@ func InitDB() (*gorm.DB, error) {
 
 	// 初始化推荐资源数据
 	seedInitialResources(db)
+
+	// 初始化知识图谱数据
+	seedInitialKnowledgeGraph(db)
 
 	// 初始化管理员账号
 	initAdminUser(db)
@@ -140,6 +145,69 @@ func seedInitialResources(db *gorm.DB) {
 		// This will create the resource if it doesn't exist, or update it if it does.
 		if err := db.Where(model.Resource{ResourceID: r.ResourceID}).Assign(r).FirstOrCreate(&model.Resource{}).Error; err != nil {
 			log.Printf("Failed to seed resource %s: %v", r.Title, err)
+		}
+	}
+}
+
+func seedInitialKnowledgeGraph(db *gorm.DB) {
+	// 1. Create Categories
+	categories := []model.KnowledgePointCategory{
+		{Name: "基础语法"},
+		{Name: "并发编程"},
+		{Name: "Web开发"},
+		{Name: "区块链应用"},
+	}
+	for i := range categories {
+		db.FirstOrCreate(&categories[i], model.KnowledgePointCategory{Name: categories[i].Name})
+	}
+	// Create a map for easy lookup
+	catMap := make(map[string]uint)
+	for _, c := range categories {
+		catMap[c.Name] = c.ID
+	}
+
+	// 2. Define Points and their relationships
+	pointsData := map[string]struct {
+		Category   string
+		ParentName string
+	}{
+		"Go基础":      {Category: "基础语法"},
+		"变量与数据类型":   {Category: "基础语法", ParentName: "Go基础"},
+		"控制流":       {Category: "基础语法", ParentName: "Go基础"},
+		"函数":        {Category: "基础语法", ParentName: "Go基础"},
+		"结构体与方法":    {Category: "基础语法", ParentName: "Go基础"},
+		"并发编程":      {Category: "并发编程", ParentName: "Go基础"},
+		"Goroutine": {Category: "并发编程", ParentName: "并发编程"},
+		"Channel":   {Category: "并发编程", ParentName: "并发编程"},
+		"sync包":     {Category: "并发编程", ParentName: "并发编程"},
+		"Web开发":     {Category: "Web开发", ParentName: "Go基础"},
+		"net/http":  {Category: "Web开发", ParentName: "Web开发"},
+		"Gin框架":     {Category: "Web开发", ParentName: "Web开发"},
+		"区块链应用":     {Category: "区块链应用"},
+		"智能合约":      {Category: "区块链应用", ParentName: "结构体与方法"}, // Cross-category
+		"分布式系统":     {Category: "区块链应用", ParentName: "并发编程"},   // Cross-category
+	}
+
+	// 3. Create all point objects and store them in a map for relationship building
+	pointMap := make(map[string]*model.KnowledgePoint)
+	for name, data := range pointsData {
+		point := &model.KnowledgePoint{
+			Name:       name,
+			CategoryID: catMap[data.Category],
+		}
+		db.FirstOrCreate(point, model.KnowledgePoint{Name: name})
+		pointMap[name] = point
+	}
+
+	// 4. Iterate again to set parent relationships
+	for name, data := range pointsData {
+		if data.ParentName != "" {
+			child := pointMap[name]
+			parent := pointMap[data.ParentName]
+			if child != nil && parent != nil {
+				child.ParentID = &parent.ID
+				db.Save(child)
+			}
 		}
 	}
 }

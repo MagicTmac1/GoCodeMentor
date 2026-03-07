@@ -1,4 +1,4 @@
-﻿请生成一个关于 %s 的编程作业，难度级别：%s。
+请生成一个关于 %s 的编程作业，难度级别：%s。
 
 ### 必须严格遵守的 JSON 结构：
 {
@@ -6,28 +6,33 @@
   "description": "作业描述",
   "questions": [
     {
-      "type": "choice",
+      "type": "choice", // 或 "fill"
       "content": "题目内容",
-      "options": ["A. 选项1", "B. 选项2", "C. 选项3", "D. 选项4"],
-      "answer": "A",
-      "score": 10
-    },
-    {
-      "type": "fill",
-      "content": "题目内容，使用 ___ 表示填空位置",
-      "answer": "标准答案",
+      "options": ["A. 选项1", "B. 选项2"], // 填空题无此字段
+      "answer": "A", // 填空题是字符串答案
       "score": 10
     },
     {
       "type": "code",
       "content": "编程题要求描述",
-      "answer": "这里必须是完整的、可运行的 Go 代码实现",
+      "answer": [
+        "package main",
+        "",
+        "import \"fmt\"",
+        "",
+        "func main() {",
+        "\tfmt.Println(\"Hello, World!\")",
+        "}"
+      ],
       "score": 40
     }
   ]
 }
 
-### 要求：
-1. 包含 3-5 个题目。
-2. 编程题的 answer 字段必须包含真实可用的 Go 代码。
-3. 只能返回上述 JSON 对象，不要有任何前缀或后缀文字。
+### 极端重要的规则 (Absolute Rules):
+1.  **JSON Only**: 你的唯一输出必须是上述结构的、单一且完整的 JSON 对象。严禁任何前后缀文字、解释或 Markdown 标记。
+2.  **答案格式**: 
+    -   对于 `choice` 和 `fill` 类型的题目, `answer` 字段必须是一个**字符串**。
+    -   对于 `code` 类型的题目, `answer` 字段必须是一个**字符串数组**，数组中的每个字符串代表一行代码。
+3.  **代码质量**: `code` 题的答案必须是完整、可直接运行的 Go 代码。
+4.  **题目数量**: 包含 3-5 个题目。
