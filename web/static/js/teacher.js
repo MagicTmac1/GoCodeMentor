@@ -215,9 +215,47 @@ function createClass() {
     console.log("createClass function called");
 }
 
-function handleClassExcelUpload(input) {
-    // Logic to handle Excel upload will be implemented here
-    console.log("handleClassExcelUpload function called");
+async function handleClassExcelUpload(input) {
+    const file = input.files[0];
+    const statusEl = document.getElementById('classUploadStatus');
+
+    if (!file) {
+        statusEl.innerHTML = '';
+        return;
+    }
+
+    statusEl.innerHTML = `准备上传: ${file.name}`;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        statusEl.innerHTML = '正在上传并处理...';
+        const response = await fetch('/api/classes/import', {
+            method: 'POST',
+            body: formData,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || '上传失败');
+        }
+
+        let summary = `<b>导入完成</b><br>
+                     新增班级: ${result.class_success || 0}<br>
+                     新增学生: ${result.student_created || 0}<br>
+                     关联学生: ${result.student_success || 0}<br>
+                     失败: ${result.student_failed || 0}`;
+
+        statusEl.innerHTML = summary;
+        loadClasses();
+        // Optionally, hide the modal after a delay
+        setTimeout(hideCreateModal, 3000);
+
+    } catch (error) {
+        statusEl.innerHTML = `<span style="color:red;">错误: ${error.message}</span>`;
+    }
 }
 
 function deleteClass() {
