@@ -1,18 +1,56 @@
+
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>作业答题 - GoCodeMentor</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css?v=1.3"> <!-- Link to main dashboard CSS -->
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
-        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        h1 { color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; margin-bottom: 20px; }
+        body {
+            background: #f5f7fa; /* Consistent background */
+        }
+        .container {
+            max-width: 900px; /* A bit wider for comfort */
+            margin-top: 40px;
+            margin-bottom: 40px;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .page-header h1 {
+            font-size: 28px;
+            color: #111827;
+            margin: 0;
+        }
+        .back-link {
+            font-size: 14px;
+            color: #4B5563;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid #D1D5DB;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .back-link:hover {
+            background: #F9FAFB;
+            border-color: #6B7280;
+        }
         .deadline-info { 
             background: #fff3cd; 
             border-left: 4px solid #ffc107; 
             padding: 12px 15px; 
             border-radius: 6px; 
-            margin-bottom: 20px; 
+            margin-bottom: 30px; 
             display: flex; 
             align-items: center; 
             gap: 10px; 
@@ -27,31 +65,84 @@
         }
         .deadline-icon { font-size: 18px; }
         .deadline-text { font-size: 14px; flex-grow: 1; }
-        .question { margin: 20px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; }
-        input, textarea { 
-            width: 100%; 
-            padding: 10px; 
-            margin-top: 8px; 
-            border: 1px solid #ddd; 
-            border-radius: 4px; 
-            font-family: 'Consolas', 'Monaco', monospace; 
-            font-size: 14px; 
+
+        .question {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #F9FAFB;
+            border-radius: 12px;
+            border: 1px solid #F3F4F6;
         }
-        button { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            color: white; 
-            border: none; 
-            padding: 12px 30px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 16px; 
-            margin-top: 20px; 
+        .question-title {
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 15px;
+            font-size: 16px;
         }
-        button:disabled { 
-            background: #cccccc; 
-            cursor: not-allowed; 
+        .question p {
+            color: #374151;
+            line-height: 1.6;
         }
-        .result { margin-top: 20px; padding: 20px; background: #e3f2fd; border-radius: 8px; display: none; }
+        input[type="text"], textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            margin-top: 8px;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        textarea {
+            min-height: 150px;
+            line-height: 1.6;
+        }
+        .submit-container {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 40px;
+            padding-top: 25px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .submit-container #studentName {
+            width: 220px;
+            margin-right: 15px;
+            text-align: center;
+        }
+        #submitBtn {
+            margin-top: 0; /* Override from dashboard.css */
+        }
+        #submitBtn:disabled {
+             background: #cccccc; 
+             cursor: not-allowed;
+        }
+
+        #result-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: #28a745;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 9999;
+            font-size: 16px;
+            font-weight: 500;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
         .error-message { 
             color: #dc3545; 
             background: #f8d7da; 
@@ -60,23 +151,34 @@
             margin-bottom: 15px; 
             display: none; 
         }
-        .time-remaining { 
-            font-weight: bold; 
-            color: #dc3545; 
-            background: white; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            margin-left: 5px; 
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>作业答题</h1>
+        <div class="page-header">
+             <h1 id="assignmentTitle">正在加载作业...</h1>
+             <a href="/?tab=assignments" class="back-link">返回作业列表</a>
+        </div>
+        
         <div id="deadlineInfo" style="display: none;"></div>
         <div id="errorMessage" class="error-message"></div>
-        <div id="assignmentContent">加载中...</div>
+
+        <div id="assignmentContent">
+             <div class="empty-state" style="min-height: 200px;">
+                <div class="icon" style="font-size: 48px;">📝</div>
+                <p>正在加载题目...</p>
+            </div>
+        </div>
+        
+        <div class="submit-container">
+            <input type="text" id="studentName" placeholder="请在此输入你的姓名" value=""/>
+            <button id="submitBtn" onclick="submit()" class="btn">
+                提交作业
+            </button>
+        </div>
     </div>
+    
+    <div id="result-popup"></div>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
@@ -89,13 +191,12 @@
                 const res = await fetch('/api/assignments/' + assignId);
                 const data = await res.json();
                 
-                // 检查作业截止时间
+                // Handle deadline info
                 if (data.assignment && data.assignment.Deadline) {
                     assignmentDeadline = new Date(data.assignment.Deadline);
                     const now = new Date();
                     const timeRemaining = assignmentDeadline - now;
                     
-                    // 计算剩余时间
                     const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
@@ -107,21 +208,16 @@
                     if (timeRemaining <= 0) {
                         isExpired = true;
                         deadlineClass = 'deadline-info warning';
-                        deadlineMessage = `⚠️ 作业提交已截止（截止时间：${assignmentDeadline.toLocaleString('zh-CN')}）`;
+                        deadlineMessage = `作业提交已截止（截止时间：${assignmentDeadline.toLocaleString('zh-CN')}）`;
                         icon = '⛔';
-                    } else if (timeRemaining < 24 * 60 * 60 * 1000) { // 小于1天
+                    } else if (timeRemaining < 24 * 60 * 60 * 1000) { // Less than 1 day
                         deadlineClass = 'deadline-info warning';
-                        deadlineMessage = `⚠️ 作业即将截止（截止时间：${assignmentDeadline.toLocaleString('zh-CN')}）`;
-                        if (days === 0 && hours < 2) {
-                            deadlineMessage += `，剩余时间：${hours}小时${minutes}分钟`;
-                            icon = '🚨';
-                        } else {
-                            deadlineMessage += `，剩余${days}天${hours}小时`;
-                            icon = '⚠️';
-                        }
+                        deadlineMessage = `作业即将截止（截止时间：${assignmentDeadline.toLocaleString('zh-CN')}）`;
+                        deadlineMessage += `，剩余${days}天${hours}小时`;
+                        icon = '⚠️';
                     } else {
                         deadlineClass = 'deadline-info success';
-                        deadlineMessage = `✅ 作业可提交（截止时间：${assignmentDeadline.toLocaleString('zh-CN')}）`;
+                        deadlineMessage = `作业可提交（截止时间：${assignmentDeadline.toLocaleString('zh-CN')}）`;
                         deadlineMessage += `，剩余${days}天${hours}小时`;
                         icon = '✅';
                     }
@@ -135,46 +231,67 @@
                     document.getElementById('deadlineInfo').style.display = 'block';
                 }
                 
-                let html = `<h2>${data.assignment.Title}</h2><p>${data.assignment.Description || '暂无描述'}</p>`;
+                document.getElementById('assignmentTitle').textContent = data.assignment.Title;
+                
+                let questionsHtml = `<p style="color: #6B7280; margin-bottom: 30px;">${data.assignment.Description || '暂无描述'}</p>`;
                 
                 if (data.questions && data.questions.length > 0) {
                     data.questions.forEach((q, idx) => {
                         const questionId = q.ID || q.id;
-                        html += `<div class="question">
-                            <p><strong>题目 ${idx+1} (${q.Type})</strong></p>
-                            <p>${q.Content}</p>
-                            ${q.Type === 'code' ? 
-                                `<textarea id="ans_${questionId}" rows="6" placeholder="在此输入代码..." ${isExpired ? 'disabled' : ''}></textarea>` :
-                                `<input type="text" id="ans_${questionId}" placeholder="你的答案" ${isExpired ? 'disabled' : ''}>`
+                        let answer_html = '';
+                        if (q.Type === 'code') {
+                            answer_html = `<textarea id="ans_${questionId}" placeholder="在此输入代码..." ${isExpired ? 'disabled' : ''}></textarea>`;
+                        } else if (q.Type === 'choice' && q.Options) {
+                            try {
+                                const optionsArray = JSON.parse(q.Options);
+                                if (Array.isArray(optionsArray)) {
+                                    answer_html += '<div class="options-container">';
+                                    optionsArray.forEach((optionText, index) => {
+                                        const optionLabel = String.fromCharCode(65 + index);
+                                        const radioId = `ans_${questionId}_${optionLabel}`;
+                                        answer_html += `
+                                            <div class="option-item-radio">
+                                                <input type="radio" id="${radioId}" name="ans_${questionId}" value="${optionLabel}" ${isExpired ? 'disabled' : ''}>
+                                                <label for="${radioId}">${optionText}</label>
+                                            </div>
+                                        `;
+                                    });
+                                    answer_html += '</div>';
+                                }
+                            } catch (e) {
+                                console.error('Error parsing options:', q.Options, e);
+                                answer_html = `<p style="color:red;">Failed to load options.</p>`
                             }
+                        } else { // Fallback for fill-in-the-blank and other types
+                            answer_html = `<input type="text" id="ans_${questionId}" placeholder="你的答案" ${isExpired ? 'disabled' : ''}>`;
+                        }
+
+                        questionsHtml += `<div class="question">
+                            <div class="question-title">题目 ${idx+1} (${q.Type}, ${q.Score}分)</div>
+                            <p>${q.Content}</p>
+                            ${answer_html}
                         </div>`;
                     });
                 } else {
-                    html += `<textarea id="code_answer" rows="10" placeholder="编程题：在此输入完整代码..." ${isExpired ? 'disabled' : ''}></textarea>`;
+                    questionsHtml += `<div class="question">
+                        <div class="question-title">编程题</div>
+                        <textarea id="code_answer" placeholder="在此输入完整代码..." ${isExpired ? 'disabled' : ''}></textarea>
+                    </div>`;
                 }
                 
-                // 获取学生信息（从sessionStorage或cookie）
-                const userId = getCookie('user_id') || sessionStorage.getItem('user_id');
+                document.getElementById('assignmentContent').innerHTML = questionsHtml;
+                
                 const userName = getCookie('user_name') || sessionStorage.getItem('user_name');
+                if(userName) {
+                    document.getElementById('studentName').value = userName;
+                }
                 
-                html += `
-                    <div style="margin-top: 20px;">
-                        <input type="text" id="studentName" placeholder="你的姓名" style="width: 200px; margin-right: 10px;" 
-                               value="${userName || ''}" ${isExpired ? 'disabled' : ''}>
-                        <button id="submitBtn" onclick="submit()" ${isExpired ? 'disabled' : ''}>
-                            ${isExpired ? '❌ 作业已截止' : '提交作业'}
-                        </button>
-                    </div>
-                    <div id="result" class="result"></div>
-                `;
-                
-                document.getElementById('assignmentContent').innerHTML = html;
-                
-                // 如果已过期，显示错误信息
                 if (isExpired) {
-                    document.getElementById('errorMessage').innerHTML = 
-                        '❌ 此作业提交已截止，无法继续提交。如有疑问请联系教师。';
+                    document.getElementById('errorMessage').innerHTML = '❌ 此作业提交已截止，无法继续提交。如有疑问请联系教师。';
                     document.getElementById('errorMessage').style.display = 'block';
+                    document.getElementById('studentName').disabled = true;
+                    document.getElementById('submitBtn').disabled = true;
+                    document.getElementById('submitBtn').textContent = '❌ 作业已截止';
                 }
                 
             } catch (e) {
@@ -182,7 +299,6 @@
             }
         }
         
-        // 获取cookie辅助函数
         function getCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
@@ -191,7 +307,6 @@
         }
         
         async function submit() {
-            // 再次检查是否过期（防止用户在页面停留时间过长）
             if (isExpired) {
                 alert('作业已截止，无法提交！');
                 return;
@@ -204,15 +319,21 @@
             }
             
             const answers = {};
-            document.querySelectorAll('[id^="ans_"]').forEach(el => {
+            // Handle text/code inputs
+            document.querySelectorAll('textarea[id^="ans_"], input[type="text"][id^="ans_"]').forEach(el => {
                 const questionId = el.id.replace('ans_', '');
+                answers[questionId] = el.value;
+            });
+
+            // Handle choice inputs (radio buttons)
+            document.querySelectorAll('input[type="radio"][name^="ans_"]:checked').forEach(el => {
+                const questionId = el.name.replace('ans_', '');
                 answers[questionId] = el.value;
             });
             
             const code = document.getElementById('code_answer')?.value || '';
             
             try {
-                // 获取学生ID
                 const studentId = getCookie('user_id') || sessionStorage.getItem('user_id') || 'stu_' + Date.now();
                 
                 const res = await fetch(`/api/assignments/${assignId}/submit`, {
@@ -239,44 +360,38 @@
                 }
                 
                 if (data.error) {
-                    // 检查是否是截止时间相关的错误
                     if (data.error.includes('截止') || data.error.includes('过期')) {
                         isExpired = true;
                         document.getElementById('submitBtn').disabled = true;
                         document.getElementById('submitBtn').textContent = '❌ 作业已截止';
-                        document.getElementById('errorMessage').innerHTML = 
-                            '❌ ' + data.error + '，无法提交。';
+                        document.getElementById('errorMessage').innerHTML = '❌ ' + data.error + '，无法提交。';
                         document.getElementById('errorMessage').style.display = 'block';
                         alert(data.error);
                     } else {
                         alert('提交失败：' + data.error);
                     }
                 } else {
-                    document.getElementById('result').style.display = 'block';
-                    document.getElementById('result').innerHTML = `
-                        <h3>✅ 提交成功！</h3>
-                        <p>提交ID：${data.id || data.submission_id}</p>
-                        <p>AI正在批改中，请稍后查询成绩...</p>
-                    `;
-                    
-                    // 禁用提交按钮防止重复提交
+                    const popup = document.getElementById('result-popup');
+                    popup.textContent = '✅ 提交成功！2秒后将返回作业列表...';
+                    popup.style.display = 'block';
+
                     document.getElementById('submitBtn').disabled = true;
                     document.getElementById('submitBtn').textContent = '✅ 已提交';
-                    
-                    // 禁用所有输入框
-                    document.querySelectorAll('[id^="ans_"], #code_answer, #studentName').forEach(el => {
+                    document.querySelectorAll('input, textarea').forEach(el => {
                         el.disabled = true;
                     });
+
+                    setTimeout(() => {
+                        window.location.href = '/?tab=assignments';
+                    }, 2000);
                 }
             } catch (e) {
                 alert('提交失败：' + e.message);
             }
         }
         
-        // 页面加载完成后执行
         window.onload = loadAssignment;
         
-        // 定期检查是否过期（每分钟检查一次）
         if (assignId) {
             setInterval(() => {
                 if (assignmentDeadline && !isExpired) {
@@ -285,17 +400,15 @@
                         isExpired = true;
                         document.getElementById('submitBtn').disabled = true;
                         document.getElementById('submitBtn').textContent = '❌ 作业已截止';
-                        document.getElementById('errorMessage').innerHTML = 
-                            '❌ 作业提交已截止，无法继续提交。';
+                        document.getElementById('errorMessage').innerHTML = '❌ 作业提交已截止，无法继续提交。';
                         document.getElementById('errorMessage').style.display = 'block';
                         
-                        // 禁用所有输入框
-                        document.querySelectorAll('[id^="ans_"], #code_answer, #studentName').forEach(el => {
+                        document.querySelectorAll('input, textarea').forEach(el => {
                             el.disabled = true;
                         });
                     }
                 }
-            }, 60000); // 每分钟检查一次
+            }, 60000);
         }
     </script>
 </body>

@@ -457,6 +457,28 @@ async function viewAssignmentDetail(assignmentId) {
         if (data.questions && data.questions.length > 0) {
             contentHtml += '<div class="questions-container">';
             data.questions.forEach((q, index) => {
+                const debug_html = `<pre style="background: #f0f0f0; border: 1px solid #ddd; padding: 10px; margin-top: 10px; font-size: 12px; white-space: pre-wrap; word-break: break-all;"><strong>DEBUG INFO:</strong>\nType: ${q.Type}\nOptions Raw: ${q.Options}\n</pre>`;
+
+                let options_html = '';
+                if (q.Type === 'choice' && q.Options) {
+                    options_html += '<div class="options-container">';
+                    try {
+                        const optionsArray = JSON.parse(q.Options);
+                        if (Array.isArray(optionsArray)) {
+                            optionsArray.forEach((optionText, index) => {
+                                const optionLabel = String.fromCharCode(65 + index); // A, B, C...
+                                options_html += `<p class="option-item"><strong>${optionLabel}.</strong> ${optionText}</p>`;
+                            });
+                        } else {
+                             console.error('Parsed options is not an array:', optionsArray);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing options:', q.Options, e);
+                        options_html += `<p style="color:red;">Failed to load options.</p>`
+                    }
+                    options_html += '</div>';
+                }
+
                 let answer_html;
                 if (q.Type === 'programming' || (q.Answer && q.Answer.includes('package main') && !q.Answer.includes('```'))) {
                     const formattedCode = marked.parse('```go\n' + q.Answer + '\n```');
@@ -467,7 +489,9 @@ async function viewAssignmentDetail(assignmentId) {
                 contentHtml += `
                     <div class="question-item">
                         <div class="question-title"><strong>题目 ${index + 1}:</strong> ${q.Content}</div>
+                        ${options_html}
                         ${answer_html}
+
                     </div>
                 `;
             });

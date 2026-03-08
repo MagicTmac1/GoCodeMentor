@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -410,8 +411,29 @@ func (s *AssignmentService) GradeSubmission(ctx context.Context, submissionID st
 
 	promptBuilder.WriteString("[标准答案库]\n")
 	for i, q := range questions {
+		correctAnswerText := q.Answer
+		if q.Type == "choice" {
+			var options []string
+			if err := json.Unmarshal([]byte(q.Options), &options); err == nil {
+				if correctAnswerText != "" {
+					// 兼容 'A', 'B' 格式
+					if correctAnswerText[0] >= 'A' && correctAnswerText[0] <= 'Z' {
+						correctOptionIndex := int(correctAnswerText[0] - 'A')
+						if correctOptionIndex >= 0 && correctOptionIndex < len(options) {
+							correctAnswerText = options[correctOptionIndex]
+						}
+					} else if index, err := strconv.Atoi(correctAnswerText); err == nil {
+						// 兼容 '1', '2' 格式 (数据库存储的是从1开始的)
+						correctOptionIndex := index - 1
+						if correctOptionIndex >= 0 && correctOptionIndex < len(options) {
+							correctAnswerText = options[correctOptionIndex]
+						}
+					}
+				}
+			}
+		}
 		promptBuilder.WriteString(fmt.Sprintf("Q%d (ID: %s) | 类型: %s | 满分: %d | 标准答案: %s\n",
-			i+1, q.ID, q.Type, q.Score, q.Answer))
+			i+1, q.ID, q.Type, q.Score, correctAnswerText))
 	}
 
 	// 添加学生答案
@@ -419,9 +441,30 @@ func (s *AssignmentService) GradeSubmission(ctx context.Context, submissionID st
 	if err := json.Unmarshal([]byte(submission.Answers), &answers); err == nil {
 		promptBuilder.WriteString("\n[学生提交内容]\n")
 		for i, q := range questions {
-			studentAns := answers[q.ID]
-			if studentAns == "" {
+			studentAns, ok := answers[q.ID]
+			if !ok || studentAns == "" {
 				studentAns = "[未回答]"
+			} else {
+				// 如果是选择题，将学生的答案（如 "A"）转换成完整的选项文本
+				if q.Type == "choice" {
+					var options []string
+					if err := json.Unmarshal([]byte(q.Options), &options); err == nil {
+						// 学生的答案总是 "A", "B" 格式
+						if len(studentAns) > 0 && studentAns[0] >= 'A' && studentAns[0] <= 'Z' {
+							optionIndex := int(studentAns[0] - 'A') // "A" -> 0, "B" -> 1, ...
+							if optionIndex >= 0 && optionIndex < len(options) {
+								studentAns = options[optionIndex] // 替换为选项的完整内容
+							} else {
+								studentAns = "[无效选项]"
+							}
+						} else {
+							// 如果不是 A,B,C,D 格式，则可能是脏数据
+							studentAns = "[无效选项]"
+						}
+					} else {
+						studentAns = "[选项解析失败]"
+					}
+				}
 			}
 			promptBuilder.WriteString(fmt.Sprintf("Q%d (ID: %s) 学生答案: %s\n", i+1, q.ID, studentAns))
 		}

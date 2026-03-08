@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"GoCodeMentor/internal/model"
@@ -114,6 +116,13 @@ func InitDB() (*gorm.DB, error) {
 // seedInitialResources seeds the database with a predefined list of resources
 // if the resources table is empty.
 func seedInitialResources(db *gorm.DB) {
+	// Check if resources already exist
+	var count int64
+	db.Model(&model.Resource{}).Count(&count)
+	if count > 0 {
+		return // Resources already seeded
+	}
+	log.Println("Seeding initial resources...")
 	resources := []model.Resource{
 		// Official
 		{ResourceID: "go-tour", Title: "A Tour of Go", URL: "https://go.dev/tour/", Description: "官方的 Go 语言入门教程，通过在线编程环境交互式学习，是入门首选。", Category: "official", IconURL: "https://www.google.com/s2/favicons?sz=64&domain=go.dev"},
@@ -150,65 +159,277 @@ func seedInitialResources(db *gorm.DB) {
 }
 
 func seedInitialKnowledgeGraph(db *gorm.DB) {
-	// 1. Create Categories
+	var count int64
+	db.Model(&model.KnowledgePoint{}).Count(&count)
+	if count > 0 {
+		// log.Println("Knowledge graph already seeded. Skipping.")
+		return
+	}
+	log.Println("Seeding initial knowledge graph data...")
+
+	tx := db.Begin()
+	if tx.Error != nil {
+		log.Printf("failed to begin transaction: %v", tx.Error)
+		return
+	}
+
+	// 1. Clean up old data
+	// No longer cleaning up data, this seeding runs only once.
+
+	// 2. Define and insert new categories based on Level 1 nodes
 	categories := []model.KnowledgePointCategory{
-		{Name: "基础语法"},
+		{Name: "Go语言基础"},
 		{Name: "并发编程"},
-		{Name: "Web开发"},
-		{Name: "区块链应用"},
+		{Name: "标准库"},
+		{Name: "工程实践"},
+		{Name: "高级特性"},
 	}
 	for i := range categories {
-		db.FirstOrCreate(&categories[i], model.KnowledgePointCategory{Name: categories[i].Name})
+		if err := tx.Create(&categories[i]).Error; err != nil {
+			log.Printf("Failed to create category %s: %v", categories[i].Name, err)
+			tx.Rollback()
+			return
+		}
 	}
-	// Create a map for easy lookup
 	catMap := make(map[string]uint)
 	for _, c := range categories {
 		catMap[c.Name] = c.ID
 	}
 
-	// 2. Define Points and their relationships
-	pointsData := map[string]struct {
-		Category   string
-		ParentName string
-	}{
-		"Go基础":      {Category: "基础语法"},
-		"变量与数据类型":   {Category: "基础语法", ParentName: "Go基础"},
-		"控制流":       {Category: "基础语法", ParentName: "Go基础"},
-		"函数":        {Category: "基础语法", ParentName: "Go基础"},
-		"结构体与方法":    {Category: "基础语法", ParentName: "Go基础"},
-		"并发编程":      {Category: "并发编程", ParentName: "Go基础"},
-		"Goroutine": {Category: "并发编程", ParentName: "并发编程"},
-		"Channel":   {Category: "并发编程", ParentName: "并发编程"},
-		"sync包":     {Category: "并发编程", ParentName: "并发编程"},
-		"Web开发":     {Category: "Web开发", ParentName: "Go基础"},
-		"net/http":  {Category: "Web开发", ParentName: "Web开发"},
-		"Gin框架":     {Category: "Web开发", ParentName: "Web开发"},
-		"区块链应用":     {Category: "区块链应用"},
-		"智能合约":      {Category: "区块链应用", ParentName: "结构体与方法"}, // Cross-category
-		"分布式系统":     {Category: "区块链应用", ParentName: "并发编程"},   // Cross-category
+	// 3. Parse the raw text data
+	rawData := `
+		节点名称：Go语言基础;节点级别：1级节点;前置节点：无;后置节点:环境搭建与工具链;节点描述:Go语言的入门基石，涵盖环境配置、工具链、基本语法及核心数据类型;
+		节点名称：环境搭建与工具链;节点级别：2级节点;前置节点：Go语言基础;后置节点:基本语法;节点描述:安装Go环境，学习go命令（run、build、install、fmt等），配置工作区和环境变量;
+		节点名称：安装Go;节点级别：3级节点;前置节点：环境搭建与工具链;后置节点:GOPATH与工作区;节点描述:介绍不同操作系统下Go的安装方法，验证安装，环境变量GOROOT的基本概念;
+		节点名称：GOPATH与工作区;节点级别：3级节点;前置节点：安装Go;后置节点:Go Modules;节点描述:传统GOPATH模式下的工作区结构（src、pkg、bin），以及其在现代开发中的演变;
+		节点名称：Go Modules;节点级别：3级节点;前置节点：GOPATH与工作区;后置节点:常用go命令;节点描述:Go Modules的引入，mod文件结构，初始化模块，管理依赖;
+		节点名称：常用go命令;节点级别：3级节点;前置节点：Go Modules;后置节点:基本语法;节点描述:go run、go build、go install、go fmt、go test等常用命令的使用和区别;
+		节点名称：基本语法;节点级别：2级节点;前置节点：环境搭建与工具链;后置节点:数据类型;节点描述:Go程序的基本结构、关键字、运算符、语句结束、注释等基础语法;
+		节点名称：程序结构与关键字;节点级别：3级节点;前置节点：基本语法;后置节点:标识符与运算符;节点描述:Go程序的基本组成（包声明、导入、函数等），25个关键字分类及作用;
+		节点名称：标识符与运算符;节点级别：3级节点;前置节点：程序结构与关键字;后置节点:字面量与常量;节点描述:标识符命名规则，空白标识符，运算符（算术、关系、逻辑、位、赋值）优先级;
+		节点名称：字面量与常量;节点级别：3级节点;前置节点：标识符与运算符;后置节点:变量声明;节点描述:整型、浮点型、字符串字面量，常量的定义（iota枚举）;
+		节点名称：变量声明;节点级别：3级节点;前置节点：字面量与常量;后置节点:数据类型;节点描述:var、:=短变量声明，多变量赋值，变量作用域;
+		节点名称：数据类型;节点级别：2级节点;前置节点：基本语法;后置节点:复合类型;节点描述:基本数据类型（整型、浮点型、布尔型、字符串）的声明、初始化、操作;
+		节点名称：整型与浮点型;节点级别：3级节点;前置节点：数据类型;后置节点:布尔型与字符串;节点描述:有符号/无符号整型（int, int8, uint等），浮点型float32/float64，类型转换;
+		节点名称：布尔型与字符串;节点级别：3级节点;前置节点：整型与浮点型;后置节点:复合类型;节点描述:布尔型bool，字符串操作（长度、拼接、切片），字符串不可变性;
+		节点名称：控制结构;节点级别：2级节点;前置节点：基本语法;后置节点:函数;节点描述:条件语句（if、switch）、循环语句（for）、延迟执行（defer）等控制流程;
+		节点名称：条件语句if;节点级别：3级节点;前置节点：控制结构;后置节点:条件语句switch;节点描述:if语句语法，if-else，if带初始化语句;
+		节点名称：条件语句switch;节点级别：3级节点;前置节点：条件语句if;后置节点:循环语句for;节点描述:switch表达式，多case，fallthrough，type switch;
+		节点名称：循环语句for;节点级别：3级节点;前置节点：条件语句switch;后置节点:延迟语句defer;节点描述:for循环三种形式（类似于while、传统for、range），break/continue;
+		节点名称：延迟语句defer;节点级别：3级节点;前置节点：循环语句for;后置节点:函数;节点描述:defer的执行时机，栈特性，常见用途（资源释放、解锁）;
+		节点名称：函数;节点级别：2级节点;前置节点：控制结构;后置节点:错误处理;节点描述:函数定义、参数传递、返回值、匿名函数、闭包、变参函数;
+		节点名称：函数定义与参数;节点级别：3级节点;前置节点：函数;后置节点:返回值与命名返回值;节点描述:函数声明语法，参数传递（值传递与引用类型），变长参数;
+		节点名称：返回值与命名返回值;节点级别：3级节点;前置节点：函数定义与参数;后置节点:匿名函数与闭包;节点描述:多返回值，命名返回值，return语句的细节;
+		节点名称：匿名函数与闭包;节点级别：3级节点;前置节点：返回值与命名返回值;后置节点:错误处理;节点描述:函数字面量，闭包捕获外部变量，应用场景;
+		节点名称：错误处理;节点级别：2级节点;前置节点：函数;后置节点:方法;节点描述:错误类型、错误处理机制、panic和recover的使用;
+		节点名称：错误值处理;节点级别：3级节点;前置节点：错误处理;后置节点:自定义错误;节点描述:error接口，检查错误（if err != nil），fmt.Errorf;
+		节点名称：自定义错误;节点级别：3级节点;前置节点：错误值处理;后置节点:panic与recover;节点描述:实现error接口，哨兵错误，错误包装与unwrap;
+		节点名称：panic与recover;节点级别：3级节点;前置节点：自定义错误;后置节点:复合类型;节点描述:panic引发运行时恐慌，recover捕获，defer结合recover处理panic;
+		节点名称：复合类型;节点级别：2级节点;前置节点：数据类型;后置节点:结构体;节点描述:数组、切片、映射的声明、初始化、操作和底层原理;
+		节点名称：数组;节点级别：3级节点;前置节点：复合类型;后置节点:切片;节点描述:数组声明、初始化，数组长度作为类型一部分，数组的遍历;
+		节点名称：切片;节点级别：3级节点;前置节点：数组;后置节点:映射;节点描述:切片创建（make、字面量），切片操作（append、copy、切片表达式），底层数组共享;
+		节点名称：映射;节点级别：3级节点;前置节点：切片;后置节点:结构体;节点描述:map声明初始化，增删改查，注意事项（并发不安全）;
+		节点名称：结构体;节点级别：2级节点;前置节点：复合类型;函数;后置节点:方法;节点描述:结构体定义、实例化、字段访问、嵌套结构体、标签;
+		节点名称：结构体定义与实例化;节点级别：3级节点;前置节点：结构体;后置节点:结构体嵌套与方法;节点描述:type定义结构体，字段标签，实例化方式（&, new）;
+		节点名称：结构体嵌套与方法;节点级别：3级节点;前置节点：结构体定义与实例化;后置节点:方法;节点描述:结构体嵌套（匿名字段），提升字段，结构体与JSON;
+		节点名称：方法;节点级别：2级节点;前置节点：结构体;函数;后置节点:接口;节点描述:方法的定义、接收者类型（值接收者、指针接收者）、方法值与方法表达式;
+		节点名称：方法定义;节点级别：3级节点;前置节点：方法;后置节点:值接收者与指针接收者;节点描述:方法声明语法，方法接收者类型，方法与函数的区别;
+		节点名称：值接收者与指针接收者;节点级别：3级节点;前置节点：方法定义;后置节点:方法表达式;节点描述:两种接收者的区别，修改结构体的场景，性能考量;
+		节点名称：方法表达式;节点级别：3级节点;前置节点：值接收者与指针接收者;后置节点:接口;节点描述:通过类型或实例调用方法，方法值，方法表达式;
+		节点名称：接口;节点级别：2级节点;前置节点：方法;错误处理;后置节点:并发编程;标准库;工程实践;高级特性;节点描述:接口定义、实现、类型断言、空接口、接口组合与多态;
+		节点名称：接口定义与实现;节点级别：3级节点;前置节点：接口;后置节点:空接口与类型断言;节点描述:接口定义，隐式实现，接口值动态类型;
+		节点名称：空接口与类型断言;节点级别：3级节点;前置节点：接口定义与实现;后置节点:接口组合;节点描述:interface{}用途，类型断言（x.(T)），类型switch;
+		节点名称：接口组合;节点级别：3级节点;前置节点：空接口与类型断言;后置节点:并发编程;标准库;工程实践;高级特性;节点描述:接口嵌入，常用接口（io.Reader/Writer）;
+		节点名称：并发编程;节点级别：1级节点;前置节点：接口;后置节点:Goroutine;节点描述:Go并发模型概述，介绍goroutine和channel的基础，实现并发编程;
+		节点名称：Goroutine;节点级别：2级节点;前置节点：并发编程;后置节点:Channel;节点描述:goroutine的创建、调度、生命周期，理解并发与并行，GMP模型简介;
+		节点名称：goroutine创建;节点级别：3级节点;前置节点：Goroutine;后置节点:goroutine调度;节点描述:使用go关键字启动并发任务，匿名goroutine，理解并发基本单位;
+		节点名称：goroutine调度;节点级别：3级节点;前置节点：goroutine创建;后置节点:GMP模型;节点描述:goroutine调度器基本概念，系统线程与goroutine的关系;
+		节点名称：GMP模型;节点级别：3级节点;前置节点：goroutine调度;后置节点:Channel;节点描述:G-M-P三者的作用，调度策略（抢占、窃取），简要模型;
+		节点名称：Channel;节点级别：2级节点;前置节点：Goroutine;后置节点:Select;同步原语;节点描述:channel的类型、创建、发送与接收操作，缓冲与非缓冲channel，关闭channel;
+		节点名称：channel创建与类型;节点级别：3级节点;前置节点：Channel;后置节点:发送与接收操作;节点描述:make创建channel，有缓冲/无缓冲chan，类型;
+		节点名称：发送与接收操作;节点级别：3级节点;前置节点：channel创建与类型;后置节点:关闭channel;节点描述:<-操作符，发送接收阻塞特性，循环接收（for range）;
+		节点名称：关闭channel;节点级别：3级节点;前置节点：发送与接收操作;后置节点:Select;节点描述:close函数，接收方检测关闭，关闭后发送panic;
+		节点名称：Select;节点级别：2级节点;前置节点：Channel;后置节点:同步原语;节点描述:select语句的使用，多路复用，超时控制，default分支;
+		节点名称：select多路复用;节点级别：3级节点;前置节点：Select;后置节点:超时与default;节点描述:select同时监听多个channel，随机选择可用的case;
+		节点名称：超时与default;节点级别：3级节点;前置节点：select多路复用;后置节点:同步原语;节点描述:结合time.After实现超时控制，default分支非阻塞;
+		节点名称：同步原语;节点级别：2级节点;前置节点：Goroutine;Channel;后置节点:无;节点描述:sync包中的Mutex、RWMutex、WaitGroup、Once、Cond等同步工具;
+		节点名称：Mutex与RWMutex;节点级别：3级节点;前置节点：同步原语;后置节点:WaitGroup;节点描述:互斥锁sync.Mutex，读写锁sync.RWMutex，使用场景;
+		节点名称：WaitGroup;节点级别：3级节点;前置节点：Mutex与RWMutex;后置节点:Once与Cond;节点描述:sync.WaitGroup等待一组goroutine完成，Add/Done/Wait;
+		节点名称：Once与Cond;节点级别：3级节点;前置节点：WaitGroup;后置节点:原子操作;节点描述:sync.Once确保函数只执行一次，sync.Cond条件变量;
+		节点名称：原子操作;节点级别：3级节点;前置节点：Once与Cond;后置节点:无;节点描述:sync/atomic包对基本类型的原子操作，CAS，原子指针;
+		节点名称：标准库;节点级别：1级节点;前置节点：接口;后置节点:输入输出;节点描述:Go标准库概览，涵盖常用包如fmt、io、net、json等的使用;
+		节点名称：输入输出;节点级别：2级节点;前置节点：标准库;后置节点:网络编程;节点描述:fmt格式化I/O、io.Reader/Writer接口、bufio缓冲I/O、os文件操作;
+		节点名称：fmt格式化输出;节点级别：3级节点;前置节点：输入输出;后置节点:io.Reader/Writer;节点描述:fmt包打印函数（Printf, Println），格式化占位符;
+		节点名称：io.Reader/Writer;节点级别：3级节点;前置节点：fmt格式化输出;后置节点:文件操作;节点描述:io包的核心接口，实现Reader/Writer的类型，组合接口;
+		节点名称：文件操作;节点级别：3级节点;前置节点：io.Reader/Writer;后置节点:bufio;节点描述:os.Open/Close，读写文件，文件权限，目录操作;
+		节点名称：bufio缓冲I/O;节点级别：3级节点;前置节点：文件操作;后置节点:网络编程;节点描述:bufio.Reader/Writer，带缓冲的读写，Scanner;
+		节点名称：网络编程;节点级别：2级节点;前置节点：输入输出;并发编程;后置节点:编码处理;节点描述:net包进行TCP/UDP编程，net/http构建HTTP客户端和服务端，中间件;
+		节点名称：TCP编程;节点级别：3级节点;前置节点：网络编程;后置节点:UDP编程;节点描述:net包Dial/Listen，建立TCP连接，处理多个连接;
+		节点名称：UDP编程;节点级别：3级节点;前置节点：TCP编程;后置节点:HTTP客户端;节点描述:UDP连接和无连接通信，使用net.DialUDP和ListenUDP;
+		节点名称：HTTP客户端;节点级别：3级节点;前置节点：UDP编程;后置节点:HTTP服务端;节点描述:http.Get/Post，Client结构，设置超时，请求构造;
+		节点名称：HTTP服务端;节点级别：3级节点;前置节点：HTTP客户端;后置节点:编码处理;节点描述:http.Handle/HandleFunc，Server结构，中间件模式;
+		节点名称：编码处理;节点级别：2级节点;前置节点：输入输出;后置节点:系统操作;节点描述:encoding/json处理JSON数据，encoding/xml处理XML，以及gob、csv等编码;
+		节点名称：JSON序列化;节点级别：3级节点;前置节点：编码处理;后置节点:JSON反序列化;节点描述:json.Marshal，结构体标签（json tag），切片/map编码;
+		节点名称：JSON反序列化;节点级别：3级节点;前置节点：JSON序列化;后置节点:其他编码;节点描述:json.Unmarshal，解码到结构体，处理动态键;
+		节点名称：其他编码;节点级别：3级节点;前置节点：JSON反序列化;后置节点:系统操作;节点描述:encoding/xml、encoding/gob、encoding/csv等简要使用;
+		节点名称：系统操作;节点级别：2级节点;前置节点：输入输出;后置节点:测试与基准;节点描述:os包环境变量、进程操作，path/filepath路径处理，time包时间和定时器;
+		节点名称：环境变量与进程;节点级别：3级节点;前置节点：系统操作;后置节点:路径处理;节点描述:os.Getenv/Setenv，os.Args，os.Exec，os.Exit;
+		节点名称：路径处理;节点级别：3级节点;前置节点：环境变量与进程;后置节点:时间与定时器;节点描述:path/filepath包处理路径（Join, Split, Glob），相对/绝对路径;
+		节点名称：时间与定时器;节点级别：3级节点;前置节点：路径处理;后置节点:测试与基准;节点描述:time包（Now, Sleep, Timer, Ticker），时间格式化;
+		节点名称：测试与基准;节点级别：2级节点;前置节点：系统操作;函数;后置节点:工程实践;节点描述:testing包编写单元测试、表驱动测试、性能基准测试、示例函数;
+		节点名称：单元测试编写;节点级别：3级节点;前置节点：测试与基准;后置节点:表驱动测试;节点描述:testing.T，测试函数格式，Error/Fatal，子测试;
+		节点名称：表驱动测试;节点级别：3级节点;前置节点：单元测试编写;后置节点:基准测试;节点描述:使用匿名结构体切片定义测试用例，提升覆盖率;
+		节点名称：基准测试;节点级别：3级节点;前置节点：表驱动测试;后置节点:工程实践;节点描述:testing.B运行基准测试，计时器控制，报告内存分配;
+		节点名称：工程实践;节点级别：1级节点;前置节点：标准库;后置节点:包管理与模块;节点描述:Go工程化实践，包括模块管理、项目结构、代码规范等;
+		节点名称：包管理与模块;节点级别：2级节点;前置节点：工程实践;后置节点:项目结构;节点描述:go mod命令，模块初始化、依赖管理、版本控制，vendor机制;
+		节点名称：go mod命令;节点级别：3级节点;前置节点：包管理与模块;后置节点:依赖管理;节点描述:go mod init/tidy/vendor等命令，go.mod文件语法;
+		节点名称：依赖管理;节点级别：3级节点;前置节点：go mod命令;后置节点:版本选择;节点描述:添加/更新依赖，替换（replace），排除（exclude）;
+		节点名称：版本选择;节点级别：3级节点;前置节点：依赖管理;后置节点:项目结构;节点描述:语义化版本，最小版本选择，go.sum校验;
+		节点名称：项目结构;节点级别：2级节点;前置节点：包管理与模块;后置节点:代码规范与格式化;节点描述:典型Go项目布局（cmd、internal、pkg等），包设计原则，避免循环导入;
+		节点名称：标准项目布局;节点级别：3级节点;前置节点：项目结构;后置节点:包设计原则;节点描述:cmd、internal、pkg、api等目录的作用，可执行程序组织;
+		节点名称：包设计原则;节点级别：3级节点;前置节点：标准项目布局;后置节点:避免循环导入;节点描述:单一职责，内聚性，导出规则，避免过深的包层级;
+		节点名称：避免循环导入;节点级别：3级节点;前置节点：包设计原则;后置节点:代码规范与格式化;节点描述:循环导入的检测和解决（接口、共同依赖包）;
+		节点名称：代码规范与格式化;节点级别：2级节点;前置节点：项目结构;后置节点:文档生成;节点描述:使用gofmt格式化代码，go vet静态检查，golint等工具，命名规范;
+		节点名称：gofmt与go vet;节点级别：3级节点;前置节点：代码规范与格式化;后置节点:命名规范;节点描述:使用gofmt统一代码风格，go vet静态检查;
+		节点名称：命名规范;节点级别：3级节点;前置节点：gofmt与go vet;后置节点:文档生成;节点描述:变量、函数、类型、包命名约定（驼峰，首字母大小写）;
+		节点名称：文档生成;节点级别：2级节点;前置节点：代码规范与格式化;后置节点:高级特性;节点描述:godoc工具，注释规范（包注释、导出元素注释），生成文档;
+		节点名称：godoc与注释;节点级别：3级节点;前置节点：文档生成;后置节点:高级特性;节点描述:注释规范（包注释、导出元素），使用go doc命令，在线文档;
+		节点名称：高级特性;节点级别：1级节点;前置节点：工程实践;后置节点:反射;节点描述:Go语言的高级主题，如反射、不安全操作、CGo、汇编等;
+		节点名称：反射;节点级别：2级节点;前置节点：高级特性;接口;后置节点:不安全操作;节点描述:reflect包，Type和Value，反射定律，动态调用和修改;
+		节点名称：reflect.Type与Value;节点级别：3级节点;前置节点：反射;后置节点:反射定律;节点描述:reflect.TypeOf和reflect.ValueOf，Kind，类型与值分离;
+		节点名称：反射定律;节点级别：3级节点;前置节点：reflect.Type与Value;后置节点:动态调用;节点描述:反射的三大定律，从Value获取类型，可设置性;
+		节点名称：动态调用与修改;节点级别：3级节点;前置节点：反射定律;后置节点:不安全操作;节点描述:通过反射调用方法，设置结构体字段（可导出），创建实例;
+		节点名称：不安全操作;节点级别：2级节点;前置节点：反射;后置节点:CGo;节点描述:unsafe包，Pointer操作，绕过类型系统，大小和偏移量;
+		节点名称：unsafe.Sizeof与Alignof;节点级别：3级节点;前置节点：不安全操作;后置节点:Pointer操作;节点描述:unsafe.Sizeof、Alignof、Offsetof，计算内存大小和对齐;
+		节点名称：Pointer操作;节点级别：3级节点;前置节点：unsafe.Sizeof与Alignof;后置节点:CGo;节点描述:unsafe.Pointer转换规则，绕过类型系统，使用场景;
+		节点名称：CGo;节点级别：2级节点;前置节点：不安全操作;后置节点:汇编;节点描述:cgo工具，在Go中调用C代码，类型转换，构建标签;
+		节点名称：CGo基础;节点级别：3级节点;前置节点：CGo;后置节点:类型转换;节点描述:导入"C"，在Go中调用C函数，构建标签cgo;
+		节点名称：类型转换;节点级别：3级节点;前置节点：CGo基础;后置节点:汇编;节点描述:C与Go类型对应，字符串、切片等转换，内存管理;
+		节点名称：汇编;节点级别：2级节点;前置节点：CGo;后置节点:无;节点描述:Go汇编语言基础，编写汇编函数，与Go交互;
+		节点名称：汇编函数;节点级别：3级节点;前置节点：汇编;后置节点:无;节点描述:编写.s文件，Go调用汇编，TEXT指令，栈帧;
+	`
+	lines := strings.Split(strings.TrimSpace(rawData), "\n")
+
+	type NodeInfo struct {
+		Name        string
+		Level       string
+		Predecessor string
+		Description string
+		Category    string // This will be inferred from the Level 1 parent
 	}
 
-	// 3. Create all point objects and store them in a map for relationship building
-	pointMap := make(map[string]*model.KnowledgePoint)
-	for name, data := range pointsData {
-		point := &model.KnowledgePoint{
-			Name:       name,
-			CategoryID: catMap[data.Category],
+	var parsedNodes []NodeInfo
+	for _, line := range lines {
+		parts := strings.Split(line, ";")
+		if len(parts) < 5 {
+			continue
 		}
-		db.FirstOrCreate(point, model.KnowledgePoint{Name: name})
-		pointMap[name] = point
+
+		kvExtract := func(part string) string {
+			// Standardize the colon to handle both English and Chinese versions
+			standardizedPart := strings.ReplaceAll(part, ":", "：")
+			kv := strings.SplitN(standardizedPart, "：", 2)
+			if len(kv) == 2 {
+				return strings.TrimSpace(kv[1])
+			}
+			return ""
+		}
+
+		node := NodeInfo{
+			Name:        kvExtract(parts[0]),
+			Level:       kvExtract(parts[1]),
+			Predecessor: kvExtract(parts[2]),
+			Description: kvExtract(parts[4]),
+		}
+
+		if node.Name == "" || node.Level == "" {
+			log.Printf("Skipping malformed line: %s", line)
+			continue
+		}
+		parsedNodes = append(parsedNodes, node)
 	}
 
-	// 4. Iterate again to set parent relationships
-	for name, data := range pointsData {
-		if data.ParentName != "" {
-			child := pointMap[name]
-			parent := pointMap[data.ParentName]
-			if child != nil && parent != nil {
-				child.ParentID = &parent.ID
-				db.Save(child)
+	// 4. Create all points and store in a map for relationship building
+	pointMap := make(map[string]*model.KnowledgePoint)
+	level1CategoryMap := make(map[string]string)
+	for _, n := range parsedNodes {
+		if n.Level == "1级节点" {
+			level1CategoryMap[n.Name] = n.Name
+		}
+	}
+
+	// Function to find the ultimate level 1 ancestor
+	var findCategory func(string) string
+	findCategory = func(nodeName string) string {
+		for _, n := range parsedNodes {
+			if n.Name == nodeName {
+				if n.Level == "1级节点" {
+					return n.Name
+				}
+				if n.Predecessor == "无" || n.Predecessor == "" {
+					// If a non-level-1 node has no predecessor, it might be a root of another tree.
+					// We need a better way to categorize it. For now, let's check if it's a category itself.
+					if _, ok := catMap[n.Name]; ok {
+						return n.Name
+					}
+					return ""
+				}
+				return findCategory(n.Predecessor)
 			}
 		}
+		return "" // Should not happen
+	}
+
+	for _, n := range parsedNodes {
+		categoryName := findCategory(n.Name)
+		catID, ok := catMap[categoryName]
+		if !ok {
+			// Fallback for nodes that might not link to our main categories
+			if c, ok := catMap[n.Name]; ok {
+				catID = c
+			} else {
+				log.Printf("Warning: Could not find category for node '%s'. Falling back.", n.Name)
+				catID = catMap["Go语言基础"] // Default fallback
+			}
+		}
+
+		level, _ := strconv.Atoi(string(n.Level[0]))
+
+		point := &model.KnowledgePoint{
+			Name:        n.Name,
+			CategoryID:  catID,
+			Description: n.Description,
+			Level:       level,
+		}
+		if err := tx.Create(point).Error; err != nil {
+			log.Printf("Failed to create knowledge point %s: %v", n.Name, err)
+			tx.Rollback()
+			return
+		}
+		pointMap[n.Name] = point
+	}
+
+	// 5. Iterate again to set parent relationships
+	for _, n := range parsedNodes {
+		if n.Predecessor != "无" && n.Predecessor != "" {
+			child, childOk := pointMap[n.Name]
+			parent, parentOk := pointMap[n.Predecessor]
+			if childOk && parentOk {
+				child.ParentID = &parent.ID
+				if err := tx.Save(child).Error; err != nil {
+					log.Printf("Failed to set parent for %s: %v", n.Name, err)
+					tx.Rollback()
+					return
+				}
+			}
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Printf("failed to commit transaction: %v", err)
+		tx.Rollback()
+	} else {
+		log.Println("Successfully seeded new knowledge graph data.")
 	}
 }
 

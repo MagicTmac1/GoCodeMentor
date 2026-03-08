@@ -5,69 +5,125 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>用户登录 - GoCodeMentor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+        html, body {
+            height: 100%;
+        }
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(-45deg, #764ba2, #667eea, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .left-panel {
+            flex: 1;
+            padding: 80px 60px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
             color: white;
+            background: rgba(0,0,0,0.4);
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
         }
-        .header h1 {
-            font-size: 48px;
-            margin-bottom: 10px;
+
+        .left-panel h1 {
+            font-size: 52px;
+            margin-bottom: 20px;
+            font-weight: 700;
         }
-        .header p {
-            font-size: 16px;
-            opacity: 0.9;
+
+        .left-panel .slogan {
+            font-size: 24px;
+            line-height: 1.6;
+            font-weight: 300;
         }
-        .login-box {
+
+        .right-panel {
+            flex: 1;
+            padding: 60px;
             background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-box {
             width: 100%;
             max-width: 400px;
         }
+
         .login-box h2 {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 35px;
             color: #333;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-size: 14px;
+            font-size: 28px;
             font-weight: 500;
         }
+
+        .form-group {
+            margin-bottom: 22px;
+            position: relative;
+        }
+        
+        .form-group .icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+        }
+
         .form-group input, .form-group select {
             width: 100%;
-            padding: 12px;
+            padding: 14px 14px 14px 45px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
+            font-size: 15px;
+            transition: all 0.3s;
         }
+        
+        .form-group select {
+            padding-left: 14px; /* Select doesn't need icon padding */
+        }
+
         .form-group input:focus, .form-group select:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
         }
+
         .btn {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
@@ -75,124 +131,125 @@
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s;
         }
+
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
         }
+        
         .btn-secondary {
             background: #6c757d;
-            margin-top: 10px;
+            margin-top: 12px;
+            box-shadow: none;
         }
+         .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0, 0.1);
+        }
+
         .toggle-link {
             text-align: center;
-            margin-top: 20px;
-            padding-top: 20px;
+            margin-top: 25px;
+            padding-top: 25px;
             border-top: 1px solid #eee;
         }
+
         .toggle-link a {
             color: #667eea;
             text-decoration: none;
             cursor: pointer;
+            font-weight: 500;
         }
-        .tips {
-            margin-top: 30px;
-            text-align: center;
-            color: rgba(255,255,255,0.8);
-            font-size: 13px;
-            max-width: 400px;
+        
+        .toggle-link a:hover {
+            text-decoration: underline;
         }
-        .tips p {
-            margin: 5px 0;
-        }
+
         .hidden {
             display: none;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div style="font-size: 64px; margin-bottom: 15px;">🎓</div>
-        <h1>GoCodeMentor</h1>
-        <p>AI驱动的智能教学平台</p>
-    </div>
-
-    <div class="login-box">
-        <h2 id="formTitle">🔐 用户登录</h2>
-        
-        <!-- 登录表单 -->
-        <div id="loginForm">
-            <div class="form-group">
-                <label>用户名</label>
-                <input type="text" id="username" placeholder="请输入用户名">
-            </div>
-            <div class="form-group">
-                <label>密码</label>
-                <input type="password" id="password" placeholder="请输入密码">
-            </div>
-            <button class="btn" onclick="login()">登录</button>
+    <div class="container">
+        <div class="left-panel">
+            <h1>🎓 GoCodeMentor</h1>
+            <p class="slogan">在这里，代码不再是冰冷的指令，<br>而是开启智慧的钥匙。<br>与AI同行，探索编程的无限可能。</p>
         </div>
-        
-        <!-- 注册表单 -->
-        <div id="registerForm" class="hidden">
-            <div class="form-group">
-                <label>用户名</label>
-                <input type="text" id="regUsername" placeholder="请输入用户名">
+        <div class="right-panel">
+            <div class="login-box">
+                <h2 id="formTitle">🔐 用户登录</h2>
+                
+                <div id="loginForm">
+                    <div class="form-group">
+                         <span class="icon">👤</span>
+                        <input type="text" id="username" placeholder="用户名">
+                    </div>
+                    <div class="form-group">
+                        <span class="icon">🔑</span>
+                        <input type="password" id="password" placeholder="密码">
+                    </div>
+                    <button class="btn" onclick="login()">登录</button>
+                </div>
+                
+                <div id="registerForm" class="hidden">
+                    <div class="form-group">
+                         <span class="icon">👤</span>
+                        <input type="text" id="regUsername" placeholder="设置一个用户名">
+                    </div>
+                    <div class="form-group">
+                        <span class="icon">🧑‍💻</span>
+                        <input type="text" id="regName" placeholder="你的显示名称">
+                    </div>
+                    <div class="form-group">
+                        <span class="icon">🔑</span>
+                        <input type="password" id="regPassword" placeholder="设置密码">
+                    </div>
+                    <div class="form-group">
+                        <select id="regRole">
+                            <option value="student">我是学生</option>
+                            <option value="teacher">我是教师</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="register()">立即注册</button>
+                </div>
+                
+                <div class="toggle-link">
+                    <span id="toggleText">还没有账号？</span>
+                    <a onclick="toggleForm()" id="toggleLink">立即注册</a>
+                </div>
             </div>
-            <div class="form-group">
-                <label>显示名称</label>
-                <input type="text" id="regName" placeholder="请输入显示名称">
-            </div>
-            <div class="form-group">
-                <label>密码</label>
-                <input type="password" id="regPassword" placeholder="请输入密码">
-            </div>
-            <div class="form-group">
-                <label>角色</label>
-                <select id="regRole">
-                    <option value="student">学生</option>
-                    <option value="teacher">教师</option>
-                </select>
-            </div>
-            <button class="btn" onclick="register()">注册</button>
-            <button class="btn btn-secondary" onclick="showLogin()">返回登录</button>
-        </div>
-        
-        <div class="toggle-link" id="toggleArea">
-            <span id="toggleText">还没有账号？</span>
-            <a onclick="toggleForm()" id="toggleLink">立即注册</a>
         </div>
     </div>
     
-    <div class="tips">
-        <p>💡 首次使用？点击"立即注册"创建账号</p>
-        <p>👨‍🏫 教师可创建班级，查看学生答疑</p>
-        <p>👨‍🎓 学生可加入班级，进行课堂答疑</p>
-    </div>
-
     <script>
-        // 清理旧的 localStorage 避免干扰
         localStorage.clear();
         
         let isLogin = true;
 
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const formTitle = document.getElementById('formTitle');
+        const toggleText = document.getElementById('toggleText');
+        const toggleLink = document.getElementById('toggleLink');
+
         function toggleForm() {
             isLogin = !isLogin;
-            document.getElementById('loginForm').classList.toggle('hidden');
-            document.getElementById('registerForm').classList.toggle('hidden');
-            document.getElementById('formTitle').textContent = isLogin ? '🔐 用户登录' : '📝 用户注册';
-            document.getElementById('toggleText').textContent = isLogin ? '还没有账号？' : '已有账号？';
-            document.getElementById('toggleLink').textContent = isLogin ? '立即注册' : '立即登录';
-        }
-
-        function showLogin() {
-            isLogin = true;
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('registerForm').classList.add('hidden');
-            document.getElementById('formTitle').textContent = '🔐 用户登录';
-            document.getElementById('toggleText').textContent = '还没有账号？';
-            document.getElementById('toggleLink').textContent = '立即注册';
+            loginForm.classList.toggle('hidden');
+            registerForm.classList.toggle('hidden');
+            
+            if (isLogin) {
+                formTitle.textContent = '🔐 用户登录';
+                toggleText.textContent = '还没有账号？';
+                toggleLink.textContent = '立即注册';
+            } else {
+                formTitle.textContent = '📝 新用户注册';
+                toggleText.textContent = '已有账号？';
+                toggleLink.textContent = '返回登录';
+            }
         }
 
         async function login() {
@@ -200,7 +257,7 @@
             const password = document.getElementById('password').value;
             
             if (!username || !password) {
-                alert('请填写完整信息');
+                alert('请填写用户名和密码');
                 return;
             }
             
@@ -213,20 +270,15 @@
                 
                 const data = await res.json();
                 if (res.ok) {
-                    // 先清理旧的 sessionStorage 确保没有残留
                     sessionStorage.clear();
-                    
-                    // 存储到 sessionStorage 供前端使用（关闭标签页即失效）
                     sessionStorage.setItem('user_id', data.id);
                     sessionStorage.setItem('user_name', data.name);
                     sessionStorage.setItem('user_role', data.role);
                     
-                    // 设置 Cookie 供后端验证（不设 max-age，关闭浏览器即失效）
                     document.cookie = `user_id=${data.id}; path=/`;
                     document.cookie = `user_role=${data.role}; path=/`;
                     document.cookie = `user_name=${data.name}; path=/`;
                     
-                    // 强制跳转到首页，后端会根据 Cookie 里的 role 渲染正确的 Dashboard
                     window.location.replace('/');
                 } else {
                     alert(data.error || '登录失败');
@@ -243,7 +295,7 @@
             const role = document.getElementById('regRole').value;
             
             if (!username || !name || !password) {
-                alert('请填写完整信息');
+                alert('请填写所有注册信息');
                 return;
             }
             
@@ -256,8 +308,8 @@
                 
                 const data = await res.json();
                 if (res.ok) {
-                    alert('注册成功，请登录');
-                    showLogin();
+                    alert('注册成功！现在您可以登录了。');
+                    toggleForm(); // Switch back to login form
                 } else {
                     alert(data.error || '注册失败');
                 }
@@ -266,24 +318,21 @@
             }
         }
 
-        // 检查是否已登录（使用 sessionStorage 和 Cookie 双重检查）
-        function checkLogin() {
+        // Initial check to prevent logged-in users from seeing the login page
+        (function checkLogin() {
             const userId = sessionStorage.getItem('user_id');
-            // 简单检查 cookie 中是否存在 user_id
             const hasCookie = document.cookie.split(';').some(c => c.trim().startsWith('user_id='));
             
             if (userId && hasCookie) {
                 window.location.replace('/');
             } else if (userId || hasCookie) {
-                // 状态不一致，清理掉
                 sessionStorage.clear();
-                document.cookie = "user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                document.cookie = "user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                document.cookie = "user_name=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                const pastDate = 'Thu, 01 Jan 1970 00:00:00 UTC';
+                document.cookie = `user_id=; expires=${pastDate}; path=/;`;
+                document.cookie = `user_role=; expires=${pastDate}; path=/;`;
+                document.cookie = `user_name=; expires=${pastDate}; path=/;`;
             }
-        }
-        
-        checkLogin();
+        })();
     </script>
 </body>
 </html>

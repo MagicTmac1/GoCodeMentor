@@ -30,46 +30,54 @@ async function loadAssignments() {
             if (statusText === '已批改' || statusText === '已查看') statusClass = 'graded';
             else if (statusText === '已提交') statusClass = 'submitted';
             
-            const score = sub.total_score !== undefined ? sub.total_score : '--';
+            // Defensively handle null or undefined score
+            const score = (sub && sub.total_score !== null && sub.total_score !== undefined) ? sub.total_score : '--';
             
             const card = document.createElement('div');
-            card.className = `assignment-card status-${statusClass}`;
+            // 复用 teacher.js 中的 class-card 样式
+            card.className = 'class-card assignment-card-student'; 
+
+            const statusBadge = document.createElement('div');
+            statusBadge.className = `assignment-status-badge ${statusClass}`;
+            statusBadge.textContent = statusText;
 
             const title = document.createElement('h3');
             title.textContent = assign.Title || '未命名作业';
 
             const deadline = document.createElement('div');
-            deadline.className = 'assignment-info';
-            deadline.textContent = `截止时间: ${assign.Deadline ? new Date(assign.Deadline).toLocaleString() : '无'}`;
-
-            const status = document.createElement('div');
-            status.className = 'assignment-info';
-            status.textContent = `状态: ${statusText}`;
+            deadline.className = 'code'; // 复用班级码的样式
+            deadline.textContent = `截止: ${assign.Deadline ? new Date(assign.Deadline).toLocaleString() : '无'}`;
+            deadline.style.marginBottom = '20px';
 
             const stats = document.createElement('div');
-            stats.className = 'assignment-stats';
+            stats.className = 'stats';
+            stats.style.justifyContent = 'flex-start'; // 左对齐
 
-            const scoreBadge = document.createElement('span');
-            scoreBadge.className = 'score-badge';
-            scoreBadge.textContent = `得分: ${score}`;
+            const scoreStat = document.createElement('div');
+            scoreStat.innerHTML = `<div class="num">${score}</div><div class="label">得分</div>`;
 
-            stats.appendChild(scoreBadge);
+            const actionButtonContainer = document.createElement('div');
+            actionButtonContainer.className = 'assignment-actions'; // 复用样式
+            actionButtonContainer.style.position = 'absolute';
+            actionButtonContainer.style.right = '25px';
+            actionButtonContainer.style.bottom = '25px';
 
             if (statusClass === 'unsubmitted') {
                 const link = document.createElement('a');
                 link.href = `/assignments/do?id=${assign.ID}`;
-                link.className = 'btn-action';
+                link.className = 'btn'; // 使用主按钮样式
                 link.textContent = '去完成';
-                stats.appendChild(link);
+                actionButtonContainer.appendChild(link);
             } else {
                 const button = document.createElement('button');
-                button.className = 'btn-action';
+                button.className = 'btn btn-secondary'; // 使用次要按钮样式
                 button.textContent = '查看详情';
                 button.onclick = () => viewAssignmentDetail(assign.ID);
-                stats.appendChild(button);
+                actionButtonContainer.appendChild(button);
             }
             
-            card.append(title, deadline, status, stats);
+            stats.append(scoreStat);
+            card.append(statusBadge, title, deadline, stats, actionButtonContainer);
             listEl.appendChild(card);
         });
     } catch (e) {
@@ -91,6 +99,9 @@ async function viewAssignmentDetail(id) {
         }
         const data = await res.json();
         const sub = data.submission || data.Submission || {};
+        const parsedQScores = (sub && sub.question_scores) ? sub.question_scores : {};
+        const parsedQFeedback = (sub && sub.question_feedback) ? sub.question_feedback : {};
+        const parsedStudentAnswers = (sub && sub.answers) ? sub.answers : {};
         
         body.innerHTML = ''; // Clear loading text
 
@@ -159,9 +170,11 @@ async function viewAssignmentDetail(id) {
             body.appendChild(questionsTitle);
 
             data.questions.forEach((q, idx) => {
-                const studentAns = sub.answers ? sub.answers[q.ID] : '未作答';
-                const qScore = sub.question_scores ? sub.question_scores[q.ID] : null;
-                const qFeedback = sub.question_feedback ? sub.question_feedback[q.ID] : null;
+
+
+                const studentAns = parsedStudentAnswers[q.ID] || '';
+                const qScore = parsedQScores[q.ID] !== undefined ? parsedQScores[q.ID] : null;
+                const qFeedback = parsedQFeedback[q.ID] || '';
 
                 const questionContainer = document.createElement('div');
                 questionContainer.style.margin = '15px 0';
@@ -171,7 +184,106 @@ async function viewAssignmentDetail(id) {
                 questionContainer.style.background = '#fff';
                 questionContainer.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
 
-                // ... (continue creating elements for question details)
+                // --- New logic to handle choice question display --- //
+                let studentAnsText = studentAns;
+                let correctAnswerText = q.Answer;
+
+                if (q.Type === 'choice' && q.Options) {
+                    try {
+                        const optionsArray = JSON.parse(q.Options);
+
+                        // Convert student's answer (e.g., 'A') to full option text
+                        if (studentAns && studentAns.match(/^[A-Z]$/)) {
+                            const studentOptionIndex = studentAns.charCodeAt(0) - 'A'.charCodeAt(0);
+                            if (studentOptionIndex >= 0 && studentOptionIndex < optionsArray.length) {
+                                studentAnsText = optionsArray[studentOptionIndex];
+                            }
+                        }
+
+                        // Convert correct answer (e.g., 'A' or '1') to full option text
+                        if (correctAnswerText && correctAnswerText.match(/^[A-Z]$/)) {
+                            const correctOptionIndex = correctAnswerText.charCodeAt(0) - 'A'.charCodeAt(0);
+                            if (correctOptionIndex >= 0 && correctOptionIndex < optionsArray.length) {
+                                correctAnswerText = optionsArray[correctOptionIndex];
+                            }
+                        } else if (correctAnswerText && !isNaN(parseInt(correctAnswerText))) { // Handle index-based answer like "1"
+                            const correctOptionIndex = parseInt(correctAnswerText) - 1;
+                             if (correctOptionIndex >= 0 && correctOptionIndex < optionsArray.length) {
+                                correctAnswerText = optionsArray[correctOptionIndex];
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error parsing question options for display:', e);
+                    }
+                }
+                // --- End of new logic --- //
+
+                const questionTitleP = document.createElement('p');
+                questionTitleP.style.fontWeight = '600';
+                questionTitleP.style.marginBottom = '12px';
+                questionTitleP.innerHTML = `<strong>${idx + 1}. ${q.Content}</strong> <span style="font-weight: 400; color: #667eea;">(${q.Score}分)</span>`;
+
+                const studentAnswerP = document.createElement('p');
+                studentAnswerP.style.marginBottom = '8px';
+                studentAnswerP.innerHTML = `<strong>你的回答:</strong> <span style="color: #333;">${studentAnsText}</span>`;
+
+                const correctAnswerP = document.createElement('p');
+                correctAnswerP.style.marginBottom = '12px';
+
+                // 仅在已批改状态下显示正确答案
+                if (sub.status === 'graded') {
+                    if (q.Type === 'code') {
+                        correctAnswerP.innerHTML = '<strong>参考答案:</strong>';
+                        const pre = document.createElement('pre');
+                        pre.style.background = '#f8f9fa';
+                        pre.style.padding = '12px';
+                        pre.style.borderRadius = '8px';
+                        pre.style.whiteSpace = 'pre-wrap';
+                        pre.style.wordWrap = 'break-word';
+                        pre.style.fontSize = '13px';
+                        
+                        const code = document.createElement('code');
+                        code.textContent = correctAnswerText;
+                        
+                        pre.appendChild(code);
+                        correctAnswerP.appendChild(pre);
+                    } else {
+                        correctAnswerP.innerHTML = `<strong>参考答案:</strong> <span style="color: #28a745; font-weight: 500;">${correctAnswerText}</span>`;
+                    }
+                }
+
+                const scoreFeedbackContainer = document.createElement('div');
+                if (qScore !== null || qFeedback) {
+                    scoreFeedbackContainer.style.background = '#f8f9fa';
+                    scoreFeedbackContainer.style.padding = '12px';
+                    scoreFeedbackContainer.style.borderRadius = '8px';
+                    scoreFeedbackContainer.style.marginTop = '12px';
+                    scoreFeedbackContainer.style.borderLeft = '4px solid #667eea';
+
+                    if (qScore !== null) {
+                        const scoreResultP = document.createElement('p');
+                        scoreResultP.innerHTML = `<strong>得分:</strong> <span style="font-weight: 700; font-size: 16px; color: ${qScore >= (q.Score / 2) ? '#28a745' : '#dc3545'};">${qScore}</span>`;
+                        scoreFeedbackContainer.appendChild(scoreResultP);
+                    }
+                    if (qFeedback) {
+                        const feedbackP = document.createElement('p');
+                        feedbackP.style.marginTop = '8px';
+                        feedbackP.innerHTML = `<strong>教师评语:</strong> ${qFeedback}`;
+                        scoreFeedbackContainer.appendChild(feedbackP);
+                    }
+                }
+
+                questionContainer.append(questionTitleP, studentAnswerP);
+
+                if (sub.status === 'graded') {
+                    questionContainer.appendChild(correctAnswerP);
+                }
+
+                if (qScore !== null || qFeedback) {
+                    questionContainer.appendChild(scoreFeedbackContainer);
+                }
+
+
 
                 body.appendChild(questionContainer);
             });
@@ -191,12 +303,10 @@ async function viewAssignmentDetail(id) {
             pre.style.padding = '20px';
             pre.style.borderRadius = '12px';
             pre.style.overflow = 'auto';
-            pre.style.fontFamily = 'Consolas, monospace';
-            pre.style.fontSize = '14px';
-            pre.style.lineHeight = '1.5';
-            pre.style.border = '1px solid #333';
+            pre.style.whiteSpace = 'pre-wrap';
+            pre.style.wordWrap = 'break-word';
 
-            const code = document.createElement('code');
+            const code = document.createElement('code');   
             code.textContent = sub.code;
 
             pre.appendChild(code);
@@ -206,7 +316,7 @@ async function viewAssignmentDetail(id) {
 
         body.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
     } catch (e) {
-        console.error(e);
+        console.error('Error in viewAssignmentDetail:', e);
         body.innerHTML = '<p style="color:red; padding: 20px; text-align: center;">加载详情失败，请检查网络或稍后重试。</p>';
     }
 }

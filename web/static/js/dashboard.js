@@ -91,7 +91,14 @@ async function loadWisdomGraph() {
                 top: 'top',
                 left: 'center'
             },
-            tooltip: {},
+            tooltip: {
+                formatter: function (params) {
+                    if (params.dataType === 'node') {
+                        return `<strong>${params.data.name}</strong><br />${params.data.description || '暂无描述'}`;
+                    }
+                    return params.name;
+                }
+            },
             legend: [{
                 data: graphData.categories.map(a => a.name),
                 orient: 'vertical',
@@ -124,8 +131,8 @@ async function loadWisdomGraph() {
                         }
                     },
                     force: {
-                        repulsion: 200,
-                        edgeLength: 80
+                        repulsion: 350,
+                        edgeLength: [100, 150]
                     }
                 }
             ]

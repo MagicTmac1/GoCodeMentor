@@ -2,13 +2,12 @@ package handler
 
 import (
 	"GoCodeMentor/internal/model"
+	"fmt"
 	"net/http"
-    "fmt"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
-
 
 type WisdomGraphHandler struct {
 	DB *gorm.DB
@@ -17,7 +16,6 @@ type WisdomGraphHandler struct {
 func NewWisdomGraphHandler(db *gorm.DB) *WisdomGraphHandler {
 	return &WisdomGraphHandler{DB: db}
 }
-
 
 func (h *WisdomGraphHandler) GetWisdomGraph(c *gin.Context) {
 	var points []model.KnowledgePoint
@@ -34,10 +32,12 @@ func (h *WisdomGraphHandler) GetWisdomGraph(c *gin.Context) {
 	}
 
 	type Node struct {
-		ID         string `json:"id"`
-		Name       string `json:"name"`
-		SymbolSize int    `json:"symbolSize"`
-		Category   int    `json:"category"`
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		SymbolSize  int    `json:"symbolSize"`
+		Category    int    `json:"category"`
+		Description string `json:"description"`
+		Level       int    `json:"level"`
 	}
 
 	type Link struct {
@@ -58,14 +58,23 @@ func (h *WisdomGraphHandler) GetWisdomGraph(c *gin.Context) {
 	}
 
 	for _, p := range points {
-		node := Node{
-			ID:         fmt.Sprintf("%d", p.ID),
-			Name:       p.Name,
-			SymbolSize: 50, // default size
-			Category:   int(p.CategoryID) - 1,
+		var symbolSize int
+		switch p.Level {
+		case 1:
+			symbolSize = 80
+		case 2:
+			symbolSize = 60
+		default:
+			symbolSize = 40
 		}
-		if p.ParentID == nil {
-			node.SymbolSize = 80 // root node
+
+		node := Node{
+			ID:          fmt.Sprintf("%d", p.ID),
+			Name:        p.Name,
+			Description: p.Description,
+			SymbolSize:  symbolSize,
+			Category:    int(p.CategoryID) - 1,
+			Level:       p.Level,
 		}
 		nodes = append(nodes, node)
 
