@@ -32,6 +32,7 @@ type ClassRepository interface {
 	GetByCode(code string) (*model.Class, error)
 	// GetByTeacherID 获取教师创建的所有班级
 	GetByTeacherID(teacherID string) ([]model.Class, error)
+	GetByIDs(ids []string) ([]model.Class, error)
 	// Delete 根据 ID 删除班级
 	Delete(id string) error
 }
@@ -90,6 +91,7 @@ type SubmissionRepository interface {
 	GetByAssignmentAndStudent(assignmentID, studentID string) (*model.Submission, error)
 	// GetByAssignmentIDs a
 	GetByAssignmentIDs(assignmentIDs []string) ([]model.Submission, error)
+	GetByStudentAndAssignmentIDs(studentID string, assignmentIDs []string) ([]model.Submission, error)
 	// Update 更新提交记录（如批改结果、分数等）
 	Update(submission *model.Submission) error
 	// CountByAssignmentID 根据作业 ID 和状态统计提交数量

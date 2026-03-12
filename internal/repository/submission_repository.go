@@ -44,6 +44,12 @@ func (r *submissionRepository) GetByAssignmentIDs(assignmentIDs []string) ([]mod
 	return submissions, err
 }
 
+func (r *submissionRepository) GetByStudentAndAssignmentIDs(studentID string, assignmentIDs []string) ([]model.Submission, error) {
+	var submissions []model.Submission
+	err := r.db.Where("student_id = ? AND assignment_id IN ?", studentID, assignmentIDs).Find(&submissions).Error
+	return submissions, err
+}
+
 func (r *submissionRepository) Update(submission *model.Submission) error {
 	return r.db.Save(submission).Error
 }

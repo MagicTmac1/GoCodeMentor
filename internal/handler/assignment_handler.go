@@ -273,37 +273,62 @@ func (h *AssignmentHandler) GetStudentAssignments(c *gin.Context) {
 		return
 	}
 
+	if len(assignments) == 0 {
+		c.JSON(200, gin.H{
+			"student":     student,
+			"assignments": []interface{}{},
+		})
+		return
+	}
+
+	// 优化：一次性获取所有提交记录
+	assignmentIDs := make([]string, len(assignments))
+	for i, a := range assignments {
+		assignmentIDs[i] = a.ID
+	}
+	submissions, err := h.assignSvc.GetSubmissionsByStudentAndAssignments(studentID, assignmentIDs)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "获取提交记录失败"})
+		return
+	}
+
+	// 将提交记录转为 map 方便快速查找: map[assignmentID] -> submission
+	submissionMap := make(map[string]interface{}) // 使用 interface{} 以便存储完整的 submissionInfo
+	for _, sub := range submissions {
+		var answers map[string]interface{}
+		var detailedScore map[string]interface{}
+		json.Unmarshal([]byte(sub.Answers), &answers)
+		json.Unmarshal([]byte(sub.DetailedScore), &detailedScore)
+
+		submissionInfo := gin.H{
+			"id":             sub.ID,
+			"student_name":   sub.StudentName,
+			"answers":        answers,
+			"code_content":   sub.CodeContent,
+			"total_score":    sub.TotalScore,
+			"ai_feedback":    sub.AIFeedback,
+			"detailed_score": detailedScore,
+			"status":         sub.Status,
+			"created_at":     sub.CreatedAt,
+			"updated_at":     sub.UpdatedAt,
+		}
+		submissionMap[sub.AssignmentID] = submissionInfo
+	}
+
 	var assignmentDetails []gin.H
 	for _, assign := range assignments {
-		submission, err := h.assignSvc.GetSubmissionByAssignmentAndStudent(assign.ID, studentID)
+		submissionInfo, found := submissionMap[assign.ID]
 
 		var status string
-		var submissionInfo gin.H
-		if err != nil || submission == nil {
+		if !found {
 			status = "未提交"
 			submissionInfo = gin.H{}
 		} else {
-			if submission.Status == "graded" {
+			subStatus := submissionInfo.(gin.H)["status"].(string)
+			if subStatus == "graded" {
 				status = "已查看"
 			} else {
 				status = "已提交"
-			}
-			var answers map[string]interface{}
-			var detailedScore map[string]interface{}
-			json.Unmarshal([]byte(submission.Answers), &answers)
-			json.Unmarshal([]byte(submission.DetailedScore), &detailedScore)
-
-			submissionInfo = gin.H{
-				"id":             submission.ID,
-				"student_name":   submission.StudentName,
-				"answers":        answers,
-				"code_content":   submission.CodeContent,
-				"total_score":    submission.TotalScore,
-				"ai_feedback":    submission.AIFeedback,
-				"detailed_score": detailedScore,
-				"status":         submission.Status,
-				"created_at":     submission.CreatedAt,
-				"updated_at":     submission.UpdatedAt,
 			}
 		}
 

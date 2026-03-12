@@ -256,6 +256,27 @@ func (h *ClassHandler) GetClassStats(c *gin.Context) {
 	var assignmentStats []AssignmentStat
 	classUnsubmittedSet := make(map[string]bool)
 
+	// 优化：一次性获取所有相关提交记录，避免N+1查询
+	assignmentIDs := make([]string, len(assignments))
+	for i, a := range assignments {
+		assignmentIDs[i] = a.ID
+	}
+
+	allSubmissions, err := h.assignSvc.GetSubmissionsByAssignmentIDs(assignmentIDs)
+	if err != nil {
+		c.JSON(500, gin.H{"error": "获取提交记录失败"})
+		return
+	}
+
+	// 创建一个map方便快速查找: map[assignmentID][studentID] -> bool
+	submissionMap := make(map[string]map[string]bool)
+	for _, sub := range allSubmissions {
+		if _, ok := submissionMap[sub.AssignmentID]; !ok {
+			submissionMap[sub.AssignmentID] = make(map[string]bool)
+		}
+		submissionMap[sub.AssignmentID][sub.StudentID] = true
+	}
+
 	for _, assign := range assignments {
 		stat := AssignmentStat{
 			ID:    assign.ID,
@@ -263,8 +284,13 @@ func (h *ClassHandler) GetClassStats(c *gin.Context) {
 		}
 
 		for _, student := range students {
-			submission, err := h.assignSvc.GetSubmissionByAssignmentAndStudent(assign.ID, student.ID)
-			if err != nil || submission == nil {
+			// 从map中直接查找，而不是查询数据库
+			submitted := false
+			if submissionForAssignment, ok := submissionMap[assign.ID]; ok {
+				submitted = submissionForAssignment[student.ID]
+			}
+
+			if !submitted {
 				stat.UnsubmittedCount++
 				stat.UnsubmittedUsers = append(stat.UnsubmittedUsers, student.Name)
 				classUnsubmittedSet[student.ID] = true

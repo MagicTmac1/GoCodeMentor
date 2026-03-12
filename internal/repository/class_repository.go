@@ -38,6 +38,12 @@ func (r *classRepository) GetByTeacherID(teacherID string) ([]model.Class, error
 	return classes, err
 }
 
+func (r *classRepository) GetByIDs(ids []string) ([]model.Class, error) {
+	var classes []model.Class
+	err := r.db.Where("id IN ?", ids).Find(&classes).Error
+	return classes, err
+}
+
 func (r *classRepository) Delete(id string) error {
 	return r.db.Where("id = ?", id).Delete(&model.Class{}).Error
 }

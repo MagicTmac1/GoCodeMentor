@@ -117,8 +117,8 @@ type Feedback struct {
 	Content         string `gorm:"type:text"`
 	AnonymousID     string `gorm:"size:100"`
 	Type            string `gorm:"size:20"` // bug, feature, praise, other
-	Status          string `gorm:"size:20;default:'open'"`
-	LikeCount       int
+	Status          string `gorm:"size:20;default:'open';index"`
+	LikeCount       int    `gorm:"index"`
 	TeacherResponse string     `gorm:"type:text"`      // 教师回复内容
 	RespondedAt     *time.Time `gorm:"type:timestamp"` // 回复时间
 	CreatedAt       time.Time

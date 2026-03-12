@@ -37,7 +37,7 @@ func NewAssignmentService(
 	userRepo repository.UserRepository,
 	classRepo repository.ClassRepository,
 	siliconFlow *siliconflow.Client,
-) *AssignmentService {
+) IAssignmentService {
 	return &AssignmentService{
 		assignRepo:          assignRepo,
 		assignmentClassRepo: assignmentClassRepo,
@@ -196,6 +196,10 @@ func (s *AssignmentService) GenerateAssignmentByAI(ctx context.Context, topic st
 	}
 
 	return assign, nil
+}
+
+func (s *AssignmentService) GetSubmissionsByAssignmentIDs(assignmentIDs []string) ([]model.Submission, error) {
+	return s.submissionRepo.GetByAssignmentIDs(assignmentIDs)
 }
 
 // GetAssignmentList 获取教师创建的作业列表
@@ -359,6 +363,13 @@ func (s *AssignmentService) SubmitAssignment(assignID string, studentID string, 
 // GetSubmissionByAssignmentAndStudent 获取学生的作业提交
 func (s *AssignmentService) GetSubmissionByAssignmentAndStudent(assignID string, studentID string) (*model.Submission, error) {
 	return s.submissionRepo.GetByAssignmentAndStudent(assignID, studentID)
+}
+
+func (s *AssignmentService) GetSubmissionsByStudentAndAssignments(studentID string, assignmentIDs []string) ([]model.Submission, error) {
+	if len(assignmentIDs) == 0 {
+		return []model.Submission{}, nil
+	}
+	return s.submissionRepo.GetByStudentAndAssignmentIDs(studentID, assignmentIDs)
 }
 
 // GetAllAssignments 获取所有作业
@@ -753,23 +764,37 @@ func (s *AssignmentService) GetPublishedClasses(assignID string) ([]model.Assign
 		return nil, err
 	}
 
-	result := []model.AssignmentClassWithClassName{}
+	if len(assignmentClasses) == 0 {
+		return []model.AssignmentClassWithClassName{}, nil
+	}
+
+	// 优化 N+1 查询：一次性获取所有相关的班级信息
+	classIDs := make([]string, len(assignmentClasses))
+	for i, ac := range assignmentClasses {
+		classIDs[i] = ac.ClassID
+	}
+
+	classes, err := s.classRepo.GetByIDs(classIDs)
+	if err != nil {
+		return nil, fmt.Errorf("获取班级信息失败: %w", err)
+	}
+
+	// 将班级信息转为 map 方便查找
+	classMap := make(map[string]string)
+	for _, class := range classes {
+		classMap[class.ID] = class.Name
+	}
+
+	result := make([]model.AssignmentClassWithClassName, 0, len(assignmentClasses))
 	for _, ac := range assignmentClasses {
-		class, err := s.classRepo.GetByID(ac.ClassID)
-		if err != nil {
-			continue // 如果班级不存在，跳过
+		className, ok := classMap[ac.ClassID]
+		if !ok {
+			continue // 如果班级不存在（数据不一致），跳过
 		}
 
 		result = append(result, model.AssignmentClassWithClassName{
-			AssignmentClass: model.AssignmentClass{
-				ID:           ac.ID,
-				AssignmentID: ac.AssignmentID,
-				ClassID:      ac.ClassID,
-				Deadline:     ac.Deadline,
-				ReleasedAt:   ac.ReleasedAt,
-				CreatedAt:    ac.CreatedAt,
-			},
-			ClassName: class.Name,
+			AssignmentClass: ac, // 直接复用整个结构体
+			ClassName:       className,
 		})
 	}
 

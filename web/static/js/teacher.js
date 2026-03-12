@@ -324,6 +324,9 @@ async function deleteAssignment(assignmentId) {
     }
 }
 
+// The problematic switchTab function was here and has been removed 
+// to allow the global switchTab from dashboard.js to function correctly.
+
 Object.assign(window.App, {
     // ... (existing functions)
     loadClasses,

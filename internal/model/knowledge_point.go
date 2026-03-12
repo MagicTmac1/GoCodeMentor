@@ -8,8 +8,8 @@ type KnowledgePoint struct {
 	Name        string `gorm:"unique;not null"`
 	Description string `gorm:"type:text"`
 	Level       int
-	CategoryID  uint
-	ParentID    *uint // Pointer to allow for null (root nodes)
+	CategoryID  uint  `gorm:"index"`
+	ParentID    *uint `gorm:"index"` // Pointer to allow for null (root nodes)
 }
 
 // KnowledgePointCategory represents a category of knowledge points.

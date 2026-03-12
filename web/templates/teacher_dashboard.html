@@ -22,17 +22,21 @@
             </div>
         </div>
         <div class="nav-tabs">
-            <div class="nav-tab active" onclick="window.App.switchTab('course-details')">📖 课程详情</div>
-            <div class="nav-tab" onclick="window.App.switchTab('wisdom-graph')">🧠 智慧图谱</div>
-            <div class="nav-tab" onclick="window.App.switchTab('classes')">📚 我的班级</div>
-            <div class="nav-tab" onclick="window.App.switchTab('assignments')">📝 作业库</div>
-            <div class="nav-tab" onclick="window.App.switchTab('feedback')">💡 意见反馈</div>
-            <div class="nav-tab" onclick="window.App.switchTab('resources')">🚀 资源推荐</div>
-            <div id="adminTab" class="nav-tab" onclick="location.href='/admin/accounts'" style="display: none;">🔐 账号管理</div>
+            {{if eq .UserRole "admin"}}
+                <div class="nav-tab active" onclick="location.href='/admin/accounts'">🔐 账号管理</div>
+            {{else}}
+                <div class="nav-tab active" onclick="window.App.switchTab('course-details')">📖 课程详情</div>
+                <div class="nav-tab" onclick="window.App.switchTab('wisdom-graph')">🧠 智慧图谱</div>
+                <div class="nav-tab" onclick="window.App.switchTab('classes')">📚 我的班级</div>
+                <div class="nav-tab" onclick="window.App.switchTab('assignments')">📝 作业库</div>
+                <div class="nav-tab" onclick="window.App.switchTab('feedback')">💡 意见反馈</div>
+                <div class="nav-tab" onclick="window.App.switchTab('resources')">🚀 资源推荐</div>
+            {{end}}
         </div>
     </div>
 
     <div class="container">
+        {{if ne .UserRole "admin"}}
         {{template "_course_details.html" .}}
 
         {{template "_wisdom_graph.html" .}}
@@ -108,6 +112,12 @@
 
 
         {{template "_resource_recommendations.html" .}}
+        {{else}}
+        <div style="padding: 40px; text-align: center;">
+            <h2>管理员工作台</h2>
+            <p>请从上方导航栏选择“账号管理”开始。</p>
+        </div>
+        {{end}}
     </div>
 
     <!-- 创建班级弹窗 -->

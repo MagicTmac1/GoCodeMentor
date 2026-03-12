@@ -51,6 +51,7 @@ type IClassService interface {
 
 // IAssignmentService 定义了作业生成、发布与批改相关的业务逻辑接口。
 type IAssignmentService interface {
+	GetSubmissionsByAssignmentIDs(assignmentIDs []string) ([]model.Submission, error)
 	// GenerateAssignmentByAI 使用 AI 技术根据主题和难度生成作业题目
 	GenerateAssignmentByAI(ctx context.Context, topic, difficulty, teacherID string) (*model.Assignment, error)
 	// GetAssignmentList 获取教师创建的作业列表
@@ -73,6 +74,7 @@ type IAssignmentService interface {
 	GetSubmission(subID string) (*model.Submission, error)
 	// GetSubmissionByAssignmentAndStudent 获取学生针对某个作业的提交记录
 	GetSubmissionByAssignmentAndStudent(assignmentID, studentID string) (*model.Submission, error)
+	GetSubmissionsByStudentAndAssignments(studentID string, assignmentIDs []string) ([]model.Submission, error)
 	// GetPendingSubmissionCountByAssignment 统计作业待批改的提交数
 	GetPendingSubmissionCountByAssignment(assignmentID string) (int64, error)
 	// UpdateSubmissionScore 手动更新学生作业得分

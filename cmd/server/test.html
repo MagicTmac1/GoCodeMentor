@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go语言GMP调度模型可视化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        goroutine: '#22c55e',
+                        processor: '#10b981',
+                        thread: '#3b82f6',
+                        blocked: '#eab308',
+                        global: '#ef4444',
+                        idle: '#94a3b8'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    animation: {
+                        'bounce-slow': 'bounce 2s infinite',
+                        'pulse-slow': 'pulse 3s infinite',
+                        'spin-slow': 'spin 3s linear infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .g-path {
+                stroke-dasharray: 1000;
+                stroke-dashoffset: 1000;
+                animation: dash 2s linear forwards;
+            }
+            
+            @keyframes dash {
+                to {
+                    stroke-dashoffset: 0;
+                }
+            }
+            
+            .goroutine {
+                transition: all 0.3s ease;
+            }
+            
+            .goroutine-moving {
+                animation: move 1s ease-in-out;
+            }
+            
+            @keyframes move {
+                0% { transform: translateX(0); }
+                50% { transform: translateX(50px); }
+                100% { transform: translateX(0); }
+            }
+            
+            .thread-blocking {
+                animation: block 1s ease-in-out;
+            }
+            
+            @keyframes block {
+                0% { background-color: #3b82f6; }
+                50% { background-color: #eab308; }
+                100% { background-color: #eab308; }
+            }
+            
+            .tooltip {
+                position: relative;
+                display: inline-block;
+            }
+            
+            .tooltip .tooltiptext {
+                visibility: hidden;
+                width: 200px;
+                background-color: #333;
+                color: #fff;
+                text-align: center;
+                border-radius: 6px;
+                padding: 5px;
+                position: absolute;
+                z-index: 1;
+                bottom: 125%;
+                left: 50%;
+                margin-left: -100px;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            
+            .tooltip:hover .tooltiptext {
+                visibility: visible;
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold text-gray-800">Go语言GMP调度模型可视化</h1>
+                    <p class="text-gray-600 mt-2">Goroutine、Machine、Processor调度模型动态演示</p>
+                </div>
+                <div class="flex space-x-4">
+                    <button id="startBtn" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg transition-all flex items-center">
+                        <i class="fa fa-play mr-2"></i> 开始演示
+                    </button>
+                    <button id="resetBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg shadow-lg transition-all flex items-center">
+                        <i class="fa fa-refresh mr-2"></i> 重置
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Visualization Area -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">GMP调度流程可视化</h2>
+                
+                <div class="relative h-[500px] bg-gray-50 rounded-lg border border-gray-200">
+                    <!-- SVG Visualization -->
+                    <svg width="100%" height="100%" viewBox="0 0 800 500">
+                        <!-- Background Grid -->
+                        <defs>
+                            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" stroke-width="1"/>
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                        
+                        <!-- Global Run Queue -->
+                        <g transform="translate(100, 100)">
+                            <rect x="-40" y="-30" width="80" height="60" rx="10" fill="#ef4444" stroke="#dc2626" stroke-width="2"/>
+                            <text x="0" y="5" text-anchor="middle" fill="white" font-weight="bold">GRQ</text>
+                            <text x="0" y="25" text-anchor="middle" fill="white" font-size="10">全局队列</text>
+                        </g>
+                        
+                        <!-- Local Run Queue -->
+                        <g transform="translate(250, 100)">
+                            <rect x="-60" y="-30" width="120" height="60" rx="10" fill="#22c55e" stroke="#16a34a" stroke-width="2"/>
+                            <text x="0" y="5" text-anchor="middle" fill="white" font-weight="bold">LRQ</text>
+                            <text x="0" y="25" text-anchor="middle" fill="white" font-size="10">本地队列</text>
+                        </g>
+                        
+                        <!-- Processor (P) -->
+                        <g transform="translate(400, 100)">
+                            <rect x="-50" y="-30" width="100" height="60" rx="10" fill="#10b981" stroke="#059669" stroke-width="2"/>
+                            <text x="0" y="5" text-anchor="middle" fill="white" font-weight="bold">P</text>
+                            <text x="0" y="25" text-anchor="middle" fill="white" font-size="10">Processor</text>
+                        </g>
+                        
+                        <!-- OS Thread (M) -->
+                        <g transform="translate(550, 100)">
+                            <rect x="-50" y="-30" width="100" height="60" rx="10" fill="#3b82f6" stroke="#2563eb" stroke-width="2"/>
+                            <text x="0" y="5" text-anchor="middle" fill="white" font-weight="bold">M</text>
+                            <text x="0" y="25" text-anchor="middle" fill="white" font-size="10">OS Thread</text>
+                        </g>
+                        
+                        <!-- Blocked State -->
+                        <g transform="translate(700, 100)">
+                            <rect x="-50" y="-30" width="100" height="60" rx="10" fill="#eab308" stroke="#ca8a04" stroke-width="2"/>
+                            <text x="0" y="5" text-anchor="middle" fill="white" font-weight="bold">Blocked</text>
+                            <text x="0" y="25" text-anchor="middle" fill="white" font-size="10">阻塞状态</text>
+                        </g>
+                        
+                        <!-- Goroutines -->
+                        <g id="goroutines"></g>
+                        
+                        <!-- Arrows -->
+                        <path d="M 140 100 L 190 100" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+                        <path d="M 310 100 L 350 100" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+                        <path d="M 450 100 L 500 100" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+                        <path d="M 600 100 L 650 100" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+                        <path d="M 700 140 L 700 200 L 100 200 L 100 140" stroke="#6b7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+                        
+                        <!-- Arrowhead Definition -->
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                    
+                    <!-- Legend -->
+                    <div class="absolute bottom-4 left-4 bg-white p-3 rounded-lg shadow-md">
+                        <h4 class="font-bold text-sm mb-2">图例</h4>
+                        <div class="flex items-center space-x-2 text-sm">
+                            <div class="w-4 h-4 bg-red-500 rounded"></div>
+                            <span>全局运行队列</span>
+                            <div class="w-4 h-4 bg-green-500 rounded ml-4"></div>
+                            <span>本地运行队列</span>
+                            <div class="w-4 h-4 bg-teal-500 rounded ml-4"></div>
+                            <span>处理器</span>
+                        </div>
+                        <div class="flex items-center space-x-2 text-sm mt-1">
+                            <div class="w-4 h-4 bg-blue-500 rounded"></div>
+                            <span>OS线程</span>
+                            <div class="w-4 h-4 bg-yellow-500 rounded ml-4"></div>
+                            <span>阻塞状态</span>
+                            <div class="w-4 h-4 bg-purple-500 rounded ml-4"></div>
+                            <span>Goroutine</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Simulation Controls -->
+                <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Goroutine数量</label>
+                        <input type="range" id="goroutineCount" min="1" max="20" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>1</span>
+                            <span id="goroutineCountValue">5</span>
+                            <span>20</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">调度速度</label>
+                        <input type="range" id="speedControl" min="1" max="10" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>慢</span>
+                            <span id="speedValue">5</span>
+                            <span>快</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">演示场景</label>
+                        <select id="scenarioSelect" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="basic">基础调度</option>
+                            <option value="blocking">阻塞恢复</option>
+                            <option value="workstealing">工作窃取</option>
+                            <option value="preemption">抢占式调度</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats and Info Panel -->
+            <div class="bg-white rounded-xl shadow-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">实时统计</h2>
+                
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <h3 class="text-sm font-medium text-blue-700">活跃Goroutines</h3>
+                        <p id="activeGoroutines" class="text-2xl font-bold text-blue-900">0</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+                        <h3 class="text-sm font-medium text-green-700">运行中Goroutines</h3>
+                        <p id="runningGoroutines" class="text-2xl font-bold text-green-900">0</p>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
+                        <h3 class="text-sm font-medium text-yellow-700">阻塞Goroutines</h3>
+                        <p id="blockedGoroutines" class="text-2xl font-bold text-yellow-900">0</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                        <h3 class="text-sm font-medium text-purple-700">上下文切换</h3>
+                        <p id="contextSwitches" class="text-2xl font-bold text-purple-900">0</p>
+                    </div>
+                </div>
+                
+                <!-- Log Area -->
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">调度日志</h3>
+                    <div id="logArea" class="h-64 bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-y-auto font-mono text-sm">
+                        <div class="text-gray-500">等待演示开始...</div>
+                    </div>
+                </div>
+                
+                <!-- GMP Model Info -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">GMP模型说明</h3>
+                    <div class="space-y-3 text-sm text-gray-600">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white font-bold mr-3 flex-shrink-0">G</div>
+                            <div>
+                                <strong>Goroutine (G)</strong>: 轻量级线程，由Go运行时管理，创建成本低，栈大小可动态调整
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3 flex-shrink-0">M</div>
+                            <div>
+                                <strong>Machine (M)</strong>: 操作系统线程，负责执行Goroutine，数量可动态调整
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center text-white font-bold mr-3 flex-shrink-0">P</div>
+                            <div>
+                                <strong>Processor (P)</strong>: 虚拟处理器，连接G和M，数量通常等于CPU核心数
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- GMP Model Diagram -->
+        <div class="mt-8 bg-white rounded-xl shadow-xl p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">GMP模型详解</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/618cf5d3de13444caff9fd80c8b966bf~tplv-a9rns2rl98-image.image?lk3s=8e244e95&rcl=202603102047184170A96FE6A8B9233EAF&rrcfp=f06b921b&x-expires=1775738884&x-signature=i1h4uPBk9h0%2F%2FLEx1ot5L3II1mc%3D" 
+                         alt="GMP调度模型图" 
+                         class="w-full rounded-lg shadow-lg">
+                </div>
+                <div class="space-y-4">
+                    <h3 class="text-xl font-semibold text-gray-800">调度原理</h3>
+                    <div class="space-y-3 text-gray-700">
+                        <p><strong>1. 调度器设计目标：</strong>充分利用多核性能，同时简化并发编程模型</p>
+                        <p><strong>2. 工作窃取机制：</strong>当一个P的本地队列为空时，会从其他P的队列或全局队列窃取Goroutine</p>
+                        <p><strong>3. 抢占式调度：</strong>运行超过10ms的Goroutine会被标记为可抢占，在系统调用返回时触发调度</p>
+                        <p><strong>4. 阻塞恢复：</strong>当M被阻塞时，P会寻找其他空闲的M或创建新的M来执行队列中的Goroutine</p>
+                        <p><strong>5. 调度策略：</strong>优先从本地队列获取Goroutine，然后是全局队列，最后尝试工作窃取</p>
+                    </div>
+                    
+                    <h3 class="text-xl font-semibold text-gray-800 mt-6">优势特点</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-green-50 p-3 rounded-lg border border-green-100">
+                            <div class="font-bold text-green-800">轻量级</div>
+                            <div class="text-sm text-green-700">每个Goroutine仅占2KB内存</div>
+                        </div>
+                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                            <div class="font-bold text-blue-800">高并发</div>
+                            <div class="text-sm text-blue-700">单进程可支持上百万Goroutine</div>
+                        </div>
+                        <div class="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                            <div class="font-bold text-purple-800">低延迟</div>
+                            <div class="text-sm text-purple-700">调度延迟通常在微秒级别</div>
+                        </div>
+                        <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                            <div class="font-bold text-yellow-800">自动伸缩</div>
+                            <div class="text-sm text-yellow-700">根据负载动态调整线程数</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Code Examples -->
+        <div class="mt-8 bg-white rounded-xl shadow-xl p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Go并发编程示例</h2>
+            
+            <div class="mb-4 border-b border-gray-200">
+                <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="codeTabs" role="tablist">
+                    <li class="mr-2" role="presentation">
+                        <button class="inline-block p-4 border-b-2 border-blue-500 text-blue-600 rounded-t-lg active" id="basic-tab" data-tab="basic" type="button" role="tab">基础并发</button>
+                    </li>
+                    <li class="mr-2" role="presentation">
+                        <button class="inline-block p-4 border-b-2 border-transparent hover:text-gray-600 hover:border-gray-300 rounded-t-lg" id="channel-tab" data-tab="channel" type="button" role="tab">Channel使用</button>
+                    </li>
+                    <li class="mr-2" role="presentation">
+                        <button class="inline-block p-4 border-b-2 border-transparent hover:text-gray-600 hover:border-gray-300 rounded-t-lg" id="mutex-tab" data-tab="mutex" type="button" role="tab">互斥锁</button>
+                    </li>
+                    <li role="presentation">
+                        <button class="inline-block p-4 border-b-2 border-transparent hover:text-gray-600 hover:border-gray-300 rounded-t-lg" id="pool-tab" data-tab="pool" type="button" role="tab">工作池</button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div id="codeContent" class="mt-4">
+                <div id="basic-code" class="tab-content active">
+                    <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm"><code>package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func worker(id int, jobs <-chan int, results chan<- int) {
+    for j := range jobs {
+        fmt.Println("worker", id, "started job", j)
+        time.Sleep(time.Second)
+        fmt.Println("worker", id, "finished job", j)
+        results <- j * 2
+    }
+}
+
+func main() {
+    const numJobs = 5
+    
+    // 创建任务和结果通道
+    jobs := make(chan int, numJobs)
+    results := make(chan int, numJobs)
+    
+    // 启动3个worker协程
+    for w := 1; w <= 3; w++ {
+        go worker(w, jobs, results)
+    }
+    
+    // 发送任务
+    for j := 1; j <= numJobs; j++ {
+        jobs <- j
+    }
+    close(jobs)
+    
+    // 收集结果
+    for a := 1; a <= numJobs; a++ {
+        <-results
+    }
+}</code></pre>
+                </div>
+                
+                <div id="channel-code" class="tab-content hidden">
+                    <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm"><code>package main
+
+import (
+    "fmt"
+    "time"
+)
+
+func main() {
+    // 创建无缓冲通道
+    ch := make(chan string)
+    
+    // 启动协程发送数据
+    go func() {
+        for i := 0; i < 5; i++ {
+            ch <- fmt.Sprintf("消息 %d", i)
+            time.Sleep(500 * time.Millisecond)
+        }
+        close(ch) // 关闭通道
+    }()
+    
+    // 从通道接收数据
+    for msg := range ch {
+        fmt.Println("接收到:", msg)
+    }
+    
+    // 使用select处理多个通道
+    ch1 := make(chan string)
+    ch2 := make(chan string)
+    
+    go func() {
+        time.Sleep(1 * time.Second)
+        ch1 <- "来自通道1"
+    }()
+    
+    go func() {
+        time.Sleep(2 * time.Second)
+        ch2 <- "来自通道2"
+    }()
+    
+    for i := 0; i < 2; i++ {
+        select {
+        case msg1 := <-ch1:
+            fmt.Println("收到:", msg1)
+        case msg2 := <-ch2:
+            fmt.Println("收到:", msg2)
+        case <-time.After(1500 * time.Millisecond):
+            fmt.Println("超时")
+        }
+    }
+}</code></pre>
+                </div>
+                
+                <div id="mutex-code" class="tab-content hidden">
+                    <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm"><code>package main
+
+import (
+    "fmt"
+    "sync"
+    "time"
+)
+
+// 共享资源
+type Counter struct {
+    mu    sync.Mutex
+    value int
+}
+
+// 安全地增加计数
+func (c *Counter) Increment() {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    c.value++
+}
+
+// 安全地获取计数值
+func (c *Counter) Value() int {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    return c.value
+}
+
+func main() {
+    counter := &Counter{}
+    var wg sync.WaitGroup
+    
+    // 启动10个协程，每个协程增加计数1000次
+    for i := 0; i < 10; i++ {
+        wg.Add(1)
+        go func(id int) {
+            defer wg.Done()
+            for j := 0; j < 1000; j++ {
+                counter.Increment()
+                time.Sleep(time.Microsecond) // 模拟工作
+            }
+            fmt.Printf("协程 %d 完成\n", id)
+        }(i)
+    }
+    
+    // 等待所有协程完成
+    wg.Wait()
+    
+    fmt.Printf("最终计数: %d\n", counter.Value())
+    
+    // 使用RWMutex进行读写锁演示
+    var rwMutex sync.RWMutex
+    sharedData := 0
+    
+    // 多个读协程
+    for i := 0; i < 5; i++ {
+        wg.Add(1)
+        go func(id int) {
+            defer wg.Done()
+            for j := 0; j < 3; j++ {
+                rwMutex.RLock() // 读锁
+                fmt.Printf("读协程 %d 读取数据: %d\n", id, sharedData)
+                rwMutex.RUnlock()
+                time.Sleep(100 * time.Millisecond)
+            }
+        }(i)
+    }
+    
+    // 写协程
+    wg.Add(1)
+    go func() {
+        defer wg.Done()
+        for i := 0; i < 3; i++ {
+            rwMutex.Lock() // 写锁
+            sharedData++
+            fmt.Printf("写协程更新数据: %d\n", sharedData)
+            rwMutex.Unlock()
+            time.Sleep(300 * time.Millisecond)
+        }
+    }()
+    
+    wg.Wait()
+}</code></pre>
+                </div>
+                
+                <div id="pool-tab" class="tab-content hidden">
+                    <pre class="bg-gray-800 text-gray-100 p-4 rounded-lg overflow-x-auto font-mono text-sm"><code>package main
+
+import (
+    "fmt"
+    "sync"
+    "time"
+)
+
+// 工作池
+type WorkerPool struct {
+    workers    int
+    jobQueue   chan Job
+    resultQueue chan Result
+    wg         sync.WaitGroup
+}
+
+type Job struct {
+    ID   int
+    Data int
+}
+
+type Result struct {
+    Job    Job
+    Output int
+}
+
+// 创建新的工作池
+func NewWorkerPool(workers int) *WorkerPool {
+    return &WorkerPool{
+        workers:    workers,
+        jobQueue:   make(chan Job, 100),
+        resultQueue: make(chan Result, 100),
+    }
+}
+
+// 启动工作池
+func (wp *WorkerPool) Start() {
+    for i := 0; i < wp.workers; i++ {
+        wp.wg.Add(1)
+        go wp.worker(i)
+    }
+}
+
+// 工作函数
+func (wp *WorkerPool) worker(id int) {
+    defer wp.wg.Done()
+    for job := range wp.jobQueue {
+        fmt.Printf("工作者 %d 处理任务 %d\n", id, job.ID)
+        // 模拟工作
+        time.Sleep(100 * time.Millisecond)
+        result := Result{
+            Job:    job,
+            Output: job.Data * job.Data,
+        }
+        wp.resultQueue <- result
+    }
+}
+
+// 添加任务
+func (wp *WorkerPool) AddJob(job Job) {
+    wp.jobQueue <- job
+}
+
+// 关闭工作池
+func (wp *WorkerPool) Stop() {
+    close(wp.jobQueue)
+    wp.wg.Wait()
+    close(wp.resultQueue)
+}
+
+func main() {
+    // 创建8个工作者的工作池
+    pool := NewWorkerPool(8)
+    pool.Start()
+    
+    // 添加100个任务
+    for i := 0; i < 100; i++ {
+        pool.AddJob(Job{
+            ID:   i,
+            Data: i,
+        })
+    }
+    
+    // 关闭工作池并等待完成
+    go func() {
+        pool.Stop()
+    }()
+    
+    // 收集结果
+    results := make(map[int]int)
+    for result := range pool.resultQueue {
+        results[result.Job.ID] = result.Output
+        fmt.Printf("任务 %d 完成，结果: %d\n", result.Job.ID, result.Output)
+        
+        // 当所有结果都收集到了，退出
+        if len(results) == 100 {
+            break
+        }
+    }
+    
+    fmt.Println("所有任务完成!")
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <h3 class="text-xl font-bold">Go语言GMP调度模型可视化</h3>
+                    <p class="text-gray-400 mt-1">深入理解Go语言并发调度原理</p>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fa fa-github text-2xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fa fa-twitter text-2xl"></i>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fa fa-linkedin text-2xl"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400 text-sm">
+                <p>&copy; 2024 Go语言GMP可视化演示. 保留所有权利.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 全局变量
+        let isRunning = false;
+        let animationSpeed = 500; // ms
+        let goroutineCount = 5;
+        let contextSwitches = 0;
+        let goroutines = [];
+        let animationId;
+        let currentScenario = 'basic';
+        
+        // DOM元素
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const goroutineCountSlider = document.getElementById('goroutineCount');
+        const goroutineCountValue = document.getElementById('goroutineCountValue');
+        const speedControl = document.getElementById('speedControl');
+        const speedValue = document.getElementById('speedValue');
+        const scenarioSelect = document.getElementById('scenarioSelect');
+        const activeGoroutinesEl = document.getElementById('activeGoroutines');
+        const runningGoroutinesEl = document.getElementById('runningGoroutines');
+        const blockedGoroutinesEl = document.getElementById('blockedGoroutines');
+        const contextSwitchesEl = document.getElementById('contextSwitches');
+        const logArea = document.getElementById('logArea');
+        const goroutinesContainer = document.getElementById('goroutines');
+        const codeTabs = document.querySelectorAll('#codeTabs button');
+        
+        // 初始化
+        function init() {
+            // 设置事件监听器
+            startBtn.addEventListener('click', toggleSimulation);
+            resetBtn.addEventListener('click', resetSimulation);
+            goroutineCountSlider.addEventListener('input', updateGoroutineCount);
+            speedControl.addEventListener('input', updateSpeed);
+            scenarioSelect.addEventListener('change', updateScenario);
+            
+            // 代码标签切换
+            codeTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // 移除所有活动状态
+                    codeTabs.forEach(t => {
+                        t.classList.remove('border-blue-500', 'text-blue-600');
+                        t.classList.add('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
+                    });
+                    
+                    // 添加活动状态
+                    tab.classList.add('border-blue-500', 'text-blue-600');
+                    tab.classList.remove('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
+                    
+                    // 隐藏所有内容
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    
+                    // 显示选中的内容
+                    const tabId = tab.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-code`).classList.remove('hidden');
+                });
+            });
+            
+            // 初始化显示值
+            goroutineCountValue.textContent = goroutineCount;
+            speedValue.textContent = speedControl.value;
+            
+            // 创建初始Goroutines
+            createGoroutines();
+        }
+        
+        // 创建Goroutines
+        function createGoroutines() {
+            // 清空现有Goroutines
+            goroutinesContainer.innerHTML = '';
+            goroutines = [];
+            
+            for (let i = 0; i < goroutineCount; i++) {
+                const goroutine = {
+                    id: i + 1,
+                    state: 'global', // global, local, running, blocked
+                    element: null,
+                    blockedTime: 0
+                };
+                
+                // 创建SVG元素
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', 'goroutine');
+                g.setAttribute('data-id', goroutine.id);
+                
+                // 创建圆形表示Goroutine
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('r', '15');
+                circle.setAttribute('fill', '#a855f7');
+                circle.setAttribute('stroke', '#9333ea');
+                circle.setAttribute('stroke-width', '2');
+                
+                // 创建文本标签
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                text.setAttribute('fill', 'white');
+                text.setAttribute('font-size', '10');
+                text.setAttribute('font-weight', 'bold');
+                text.textContent = goroutine.id;
+                
+                // 组合元素
+                g.appendChild(circle);
+                g.appendChild(text);
+                goroutinesContainer.appendChild(g);
+                
+                // 设置初始位置（全局队列）
+                positionGoroutine(goroutine, 'global');
+                
+                goroutine.element = g;
+                goroutines.push(goroutine);
+            }
+            
+            // 更新统计
+            updateStats();
+        }
+        
+        // 定位Goroutine
+        function positionGoroutine(goroutine, state) {
+            const g = goroutine.element;
+            let x, y;
+            
+            switch (state) {
+                case 'global':
+                    x = 100;
+                    y = 100;
+                    break;
+                case 'local':
+                    x = 250;
+                    y = 100;
+                    break;
+                case 'running':
+                    x = 550;
+                    y = 100;
+                    break;
+                case 'blocked':
+                    x = 700;
+                    y = 100;
+                    break;
+                default:
+                    x = 100;
+                    y = 100;
+            }
+            
+            // 添加一些随机偏移，使Goroutines不重叠
+            const offsetX = (Math.random() - 0.5) * 40;
+            const offsetY = (Math.random() - 0.5) * 20;
+            
+            g.setAttribute('transform', `translate(${x + offsetX}, ${y + offsetY})`);
+            goroutine.state = state;
+        }
+        
+        // 切换模拟状态
+        function toggleSimulation() {
+            if (isRunning) {
+                pauseSimulation();
+                startBtn.innerHTML = '<i class="fa fa-play mr-2"></i> 继续演示';
+            } else {
+                startSimulation();
+                startBtn.innerHTML = '<i class="fa fa-pause mr-2"></i> 暂停演示';
+            }
+            isRunning = !isRunning;
+        }
+        
+        // 开始模拟
+        function startSimulation() {
+            log('开始GMP调度演示...');
+            
+            // 根据选择的场景执行不同的模拟
+            switch (currentScenario) {
+                case 'basic':
+                    runBasicScenario();
+                    break;
+                case 'blocking':
+                    runBlockingScenario();
+                    break;
+                case 'workstealing':
+                    runWorkStealingScenario();
+                    break;
+                case 'preemption':
+                    runPreemptionScenario();
+                    break;
+                default:
+                    runBasicScenario();
+            }
+        }
+        
+        // 暂停模拟
+        function pauseSimulation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            log('演示已暂停');
+        }
+        
+        // 重置模拟
+        function resetSimulation() {
+            pauseSimulation();
+            isRunning = false;
+            startBtn.innerHTML = '<i class="fa fa-play mr-2"></i> 开始演示';
+            contextSwitches = 0;
+            contextSwitchesEl.textContent = '0';
+            logArea.innerHTML = '<div class="text-gray-500">等待演示开始...</div>';
+            createGoroutines();
+            log('模拟已重置');
+        }
+        
+        // 更新Goroutine数量
+        function updateGoroutineCount() {
+            goroutineCount = parseInt(goroutineCountSlider.value);
+            goroutineCountValue.textContent = goroutineCount;
+            
+            if (!isRunning) {
+                createGoroutines();
+            }
+        }
+        
+        // 更新速度
+        function updateSpeed() {
+            const speed = parseInt(speedControl.value);
+            speedValue.textContent = speed;
+            animationSpeed = 1100 - (speed * 100); // 100ms to 1000ms
+        }
+        
+        // 更新场景
+        function updateScenario() {
+            currentScenario = scenarioSelect.value;
+            
+            if (isRunning) {
+                pauseSimulation();
+                toggleSimulation();
+            }
+            
+            log(`已切换到${getScenarioName(currentScenario)}场景`);
+        }
+        
+        // 获取场景名称
+        function getScenarioName(scenario) {
+            switch (scenario) {
+                case 'basic': return '基础调度';
+                case 'blocking': return '阻塞恢复';
+                case 'workstealing': return '工作窃取';
+                case 'preemption': return '抢占式调度';
+                default: return '基础调度';
+            }
+        }
+        
+        // 基础调度场景
+        function runBasicScenario() {
+            let step = 0;
+            
+            function animate() {
+                if (!isRunning) return;
+                
+                switch (step % 4) {
+                    case 0:
+                        // 从全局队列移动到本地队列
+                        moveRandomGoroutine('global', 'local', 'Goroutine从全局队列移动到本地队列');
+                        break;
+                    case 1:
+                        // 从本地队列移动到运行状态
+                        moveRandomGoroutine('local', 'running', 'Goroutine开始执行');
+                        break;
+                    case 2:
+                        // 从运行状态回到本地队列
+                        moveRandomGoroutine('running', 'local', 'Goroutine执行完成，回到队列');
+                        incrementContextSwitches();
+                        break;
+                    case 3:
+                        // 从全局队列直接到运行状态
+                        moveRandomGoroutine('global', 'running', 'Goroutine直接调度执行');
+                        incrementContextSwitches();
+                        break;
+                }
+                
+                step++;
+                animationId = setTimeout(animate, animationSpeed);
+            }
+            
+            animate();
+        }
+        
+        // 阻塞恢复场景
+        function runBlockingScenario() {
+            let step = 0;
+            
+            function animate() {
+                if (!isRunning) return;
+                
+                switch (step % 5) {
+                    case 0:
+                        // 从全局队列到本地队列
+                        moveRandomGoroutine('global', 'local', 'Goroutine从全局队列移动到本地队列');
+                        break;
+                    case 1:
+                        // 从本地队列到运行状态
+                        moveRandomGoroutine('local', 'running', 'Goroutine开始执行');
+                        break;
+                    case 2:
+                        // 从运行状态到阻塞状态
+                        moveRandomGoroutine('running', 'blocked', 'Goroutine执行系统调用，进入阻塞状态');
+                        break;
+                    case 3:
+                        // 从阻塞状态恢复到本地队列
+                        moveRandomGoroutine('blocked', 'local', '系统调用完成，Goroutine从阻塞状态恢复');
+                        incrementContextSwitches();
+                        break;
+                    case 4:
+                        // 从本地队列到运行状态
+                        moveRandomGoroutine('local', 'running', '恢复的Goroutine重新开始执行');
+                        incrementContextSwitches();
+                        break;
+                }
+                
+                step++;
+                animationId = setTimeout(animate, animationSpeed);
+            }
+            
+            animate();
+        }
+        
+        // 工作窃取场景
+        function runWorkStealingScenario() {
+            let step = 0;
+            
+            function animate() {
+                if (!isRunning) return;
+                
+                switch (step % 6) {
+                    case 0:
+                        // 多个Goroutine进入本地队列
+                        for (let i = 0; i < Math.min(3, goroutines.length); i++) {
+                            moveRandomGoroutine('global', 'local', 'Goroutine从全局队列移动到本地队列');
+                        }
+                        break;
+                    case 1:
+                        // 一个Goroutine开始执行
+                        moveRandomGoroutine('local', 'running', 'Goroutine开始执行');
+                        break;
+                    case 2:
+                        // 另一个Goroutine开始执行
+                        moveRandomGoroutine('local', 'running', '另一个Goroutine开始执行');
+                        break;
+                    case 3:
+                        // 执行完成
+                        moveRandomGoroutine('running', 'local', 'Goroutine执行完成');
+                        incrementContextSwitches();
+                        break;
+                    case 4:
+                        // 工作窃取：从本地队列到运行状态
+                        moveRandomGoroutine('local', 'running', '工作窃取：从其他P的队列窃取Goroutine执行');
+                        incrementContextSwitches();
+                        break;
+                    case 5:
+                        // 所有Goroutine回到全局队列
+                        goroutines.forEach(g => {
+                            if (g.state !== 'global') {
+                                positionGoroutine(g, 'global');
+                            }
+                        });
+                        log('所有Goroutine回到全局队列，准备重新调度');
+                        break;
+                }
+                
+                step++;
+                animationId = setTimeout(animate, animationSpeed * 1.5);
+            }
+            
+            animate();
+        }
+        
+        // 抢占式调度场景
+        function runPreemptionScenario() {
+            let step = 0;
+            let runningGoroutine = null;
+            
+            function animate() {
+                if (!isRunning) return;
+                
+                switch (step % 5) {
+                    case 0:
+                        // Goroutine开始执行
+                        const g = getRandomGoroutine(['global', 'local']);
+                        if (g) {
+                            moveGoroutine(g, 'running', 'Goroutine开始执行');
+                            runningGoroutine = g;
+                        }
+                        break;
+                    case 1:
+                        // 另一个Goroutine开始执行
+                        const g2 = getRandomGoroutine(['global', 'local']);
+                        if (g2) {
+                            moveGoroutine(g2, 'running', '另一个Goroutine开始执行');
+                        }
+                        break;
+                    case 2:
+                        // 长时间运行的Goroutine被标记为可抢占
+                        if (runningGoroutine) {
+                            const element = runningGoroutine.element;
+                            element.querySelector('circle').setAttribute('stroke', '#ef4444');
+                            element.querySelector('circle').setAttribute('stroke-width', '3');
+                            log(`Goroutine ${runningGoroutine.id} 运行超过10ms，被标记为可抢占`);
+                        }
+                        break;
+                    case 3:
+                        // 抢占发生
+                        if (runningGoroutine && runningGoroutine.state === 'running') {
+                            moveGoroutine(runningGoroutine, 'local', '抢占式调度：Goroutine被抢占，回到本地队列');
+                            runningGoroutine.element.querySelector('circle').setAttribute('stroke', '#9333ea');
+                            runningGoroutine.element.querySelector('circle').setAttribute('stroke-width', '2');
+                            incrementContextSwitches();
+                            runningGoroutine = null;
+                        }
+                        break;
+                    case 4:
+                        // 新的Goroutine开始执行
+                        const g3 = getRandomGoroutine(['local']);
+                        if (g3) {
+                            moveGoroutine(g3, 'running', '抢占后，新的Goroutine开始执行');
+                            incrementContextSwitches();
+                        }
+                        break;
+                }
+                
+                step++;
+                animationId = setTimeout(animate, animationSpeed);
+            }
+            
+            animate();
+        }
+        
+        // 随机移动一个Goroutine
+        function moveRandomGoroutine(fromStates, toState, message) {
+            const goroutine = getRandomGoroutine(fromStates);
+            if (goroutine) {
+                moveGoroutine(goroutine, toState, message);
+            }
+        }
+        
+        // 移动指定的Goroutine
+        function moveGoroutine(goroutine, toState, message) {
+            if (!goroutine) return;
+            
+            // 添加移动动画
+            goroutine.element.classList.add('goroutine-moving');
+            
+            // 如果是进入阻塞状态，添加阻塞动画
+            if (toState === 'blocked') {
+                goroutine.element.classList.add('thread-blocking');
+            }
+            
+            // 延迟后更新位置
+            setTimeout(() => {
+                positionGoroutine(goroutine, toState);
+                goroutine.element.classList.remove('goroutine-moving', 'thread-blocking');
+                log(`${message} (Goroutine ${goroutine.id})`);
+                updateStats();
+            }, 300);
+        }
+        
+        // 获取指定状态的随机Goroutine
+        function getRandomGoroutine(validStates) {
+            const candidates = goroutines.filter(g => validStates.includes(g.state));
+            if (candidates.length === 0) return null;
+            return candidates[Math.floor(Math.random() * candidates.length)];
+        }
+        
+        // 增加上下文切换计数
+        function incrementContextSwitches() {
+            contextSwitches++;
+            contextSwitchesEl.textContent = contextSwitches;
+        }
+        
+        // 更新统计信息
+        function updateStats() {
+            const active = goroutines.length;
+            const running = goroutines.filter(g => g.state === 'running').length;
+            const blocked = goroutines.filter(g => g.state === 'blocked').length;
+            
+            activeGoroutinesEl.textContent = active;
+            runningGoroutinesEl.textContent = running;
+            blockedGoroutinesEl.textContent = blocked;
+        }
+        
+        // 记录日志
+        function log(message) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'mb-1';
+            logEntry.innerHTML = `<span class="text-gray-400">[${timeStr}]</span> ${message}`;
+            
+            // 清空初始消息
+            if (logArea.querySelector('.text-gray-500')) {
+                logArea.innerHTML = '';
+            }
+            
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+        
+        // 启动应用
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
